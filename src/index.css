@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-base: #0a0a0b;
+    --bg-surface: #131316;
+    --bg-elevated: #1a1a1f;
+    --bg-hover: #222228;
+    --border-subtle: #26262e;
+    --border-default: #33333d;
+    --text-primary: #e8e8ed;
+    --text-secondary: #9a9aa8;
+    --text-tertiary: #6b6b78;
+  }
+
+  * {
+    border-color: var(--border-subtle);
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #2a2a32;
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #3a3a44;
+  }
+}
+
+@layer utilities {
+  .bg-base { background-color: var(--bg-base); }
+  .bg-surface { background-color: var(--bg-surface); }
+  .bg-elevated { background-color: var(--bg-elevated); }
+  .bg-hover-state { background-color: var(--bg-hover); }
+  .border-subtle { border-color: var(--border-subtle); }
+  .border-default { border-color: var(--border-default); }
+  .text-primary { color: var(--text-primary); }
+  .text-secondary { color: var(--text-secondary); }
+  .text-tertiary { color: var(--text-tertiary); }
+
+  .animate-fade-in {
+    animation: fadeIn 0.2s ease-out;
+  }
+  .animate-slide-up {
+    animation: slideUp 0.25s ease-out;
+  }
+  .animate-scale-in {
+    animation: scaleIn 0.15s ease-out;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Status color classes */
+.status-blue { background-color: rgb(59 130 246 / 0.15); color: #60a5fa; border-color: rgb(59 130 246 / 0.3); }
+.status-green { background-color: rgb(34 197 94 / 0.15); color: #4ade80; border-color: rgb(34 197 94 / 0.3); }
+.status-red { background-color: rgb(239 68 68 / 0.15); color: #f87171; border-color: rgb(239 68 68 / 0.3); }
+.status-amber { background-color: rgb(245 158 11 / 0.15); color: #fbbf24; border-color: rgb(245 158 11 / 0.3); }
+.status-slate { background-color: rgb(100 116 139 / 0.15); color: #94a3b8; border-color: rgb(100 116 139 / 0.3); }
+.status-cyan { background-color: rgb(6 182 212 / 0.15); color: #22d3ee; border-color: rgb(6 182 212 / 0.3); }
+.status-purple { background-color: rgb(168 85 247 / 0.15); color: #c084fc; border-color: rgb(168 85 247 / 0.3); }

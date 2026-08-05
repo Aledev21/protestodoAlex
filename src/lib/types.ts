@@ -1,0 +1,142 @@
+export interface Frente {
+  id: string;
+  nome: string;
+  descricao: string | null;
+  cor: string | null;
+  arquivado: boolean;
+  created_at: string;
+}
+
+export interface Cliente {
+  id: string;
+  nome: string;
+  created_at: string;
+}
+
+export interface Area {
+  id: string;
+  nome: string;
+  frente_id: string | null;
+  created_at: string;
+}
+
+export interface Stakeholder {
+  id: string;
+  nome: string;
+  email: string | null;
+  tipo: string;
+  created_at: string;
+}
+
+export interface ProcessoStakeholder {
+  id: string;
+  processo_id: string;
+  stakeholder_id: string;
+  papel: string;
+  stakeholder?: Stakeholder;
+}
+
+export interface Processo {
+  id: string;
+  frente_id: string | null;
+  cliente_id: string | null;
+  area_id: string | null;
+  responsavel_id: string | null;
+  nome: string;
+  descricao: string | null;
+  objetivo: string | null;
+  escopo: string | null;
+  status: string;
+  etapa: string;
+  prioridade: string;
+  data_criacao: string | null;
+  data_prevista: string | null;
+  created_at: string;
+  updated_at: string;
+  frente?: Frente;
+  cliente?: Cliente;
+  area?: Area;
+  responsavel?: Stakeholder;
+  processo_stakeholders?: ProcessoStakeholder[];
+  automacoes?: Automacao[];
+}
+
+export interface Automacao {
+  id: string;
+  processo_id: string;
+  responsavel_id: string | null;
+  nome: string;
+  tipo: string;
+  status: string;
+  sprint: string | null;
+  documentacao: string | null;
+  progresso: number;
+  arquivado: boolean;
+  created_at: string;
+  updated_at: string;
+  responsavel?: Stakeholder;
+}
+
+export interface TimelineEvent {
+  id: string;
+  processo_id: string | null;
+  automacao_id: string | null;
+  data: string;
+  titulo: string;
+  descricao: string | null;
+  tipo: string;
+  created_at: string;
+}
+
+export interface Pendencia {
+  id: string;
+  processo_id: string | null;
+  automacao_id: string | null;
+  tipo: string;
+  aguardando_quem: string | null;
+  descricao: string;
+  resolvida: boolean;
+  data_criacao: string | null;
+  data_resolucao: string | null;
+  created_at: string;
+}
+
+export interface ChecklistItem {
+  id: string;
+  processo_id: string | null;
+  automacao_id: string | null;
+  texto: string;
+  concluido: boolean;
+  ordem: number;
+  created_at: string;
+}
+
+export interface Comentario {
+  id: string;
+  processo_id: string;
+  autor: string | null;
+  texto: string;
+  created_at: string;
+}
+
+export interface Anexo {
+  id: string;
+  processo_id: string;
+  nome: string;
+  url: string;
+  tipo: string | null;
+  created_at: string;
+}
+
+export interface Tag {
+  id: string;
+  nome: string;
+  cor: string | null;
+}
+
+export interface ProcessoTag {
+  id: string;
+  processo_id: string;
+  tag_id: string;
+  tag?: Tag;
+}
