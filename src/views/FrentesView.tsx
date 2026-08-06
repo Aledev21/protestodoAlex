@@ -285,7 +285,7 @@ export default function FrentesView({
                   className="flex flex-1 items-center gap-3 text-left min-w-0"
                 >
                   <ChevronRight className={`h-4 w-4 text-tertiary transition-transform flex-shrink-0 ${isExpanded ? 'rotate-90' : ''}`} />
-                  <Building2 className="h-5 w-5 flex-shrink-0" style={{ color: frente.cor || '#3b82f6' }} />
+                  <Building2 className="h-5 w-5 flex-shrink-0" style={{ color: frente.cor || '#9100E2' }} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="text-base font-semibold text-primary truncate">{frente.nome}</p>
@@ -299,6 +299,9 @@ export default function FrentesView({
                     <span>{automacoesCount} automações</span>
                   </div>
                 </button>
+                <Button size="sm" variant="secondary" icon={Plus} onClick={() => setShowNewProcesso(frente.id)}>
+                  Novo Processo
+                </Button>
                 {/* 3-dot menu */}
                 <div className="relative flex-shrink-0" ref={(el) => { menuRefs.current[`f-${frente.id}`] = el; }}>
                   <button
@@ -342,9 +345,12 @@ export default function FrentesView({
               {/* --- Level 2: Setores --- */}
               {isExpanded && (
                 <div className="border-t border-subtle animate-slide-up bg-elevated/30">
-                  <div className="flex items-center justify-between px-5 py-2.5">
+                  <div className="flex items-center justify-between gap-2 px-5 py-2.5">
                     <p className="text-[11px] font-semibold uppercase tracking-wider text-tertiary">Setores</p>
-                    <Button size="sm" icon={Plus} onClick={() => setShowNewSetor(frente.id)}>Novo Setor</Button>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" variant="secondary" icon={Plus} onClick={() => setShowNewProcesso(frente.id)}>Novo Processo</Button>
+                      <Button size="sm" icon={Plus} onClick={() => setShowNewSetor(frente.id)}>Novo Setor</Button>
+                    </div>
                   </div>
 
                   {frenteSetores.length === 0 && (

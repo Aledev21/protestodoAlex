@@ -61,7 +61,7 @@ export function Button({
   disabled?: boolean;
 }) {
   const variants = {
-    primary: 'bg-gradient-to-r from-brand-deep via-brand-primary to-brand-magenta text-white shadow-md shadow-brand-primary/20 hover:shadow-lg hover:shadow-brand-primary/40 hover:brightness-110 transition-all',
+    primary: 'bg-brand-primary text-white hover:bg-brand-deep transition-colors',
     secondary: 'bg-elevated text-primary border border-default hover:border-brand-primary/50 hover:bg-hover-state transition-colors',
     ghost: 'text-secondary hover:bg-hover-state hover:text-primary transition-colors',
     danger: 'bg-red-600/90 text-white hover:bg-red-500 transition-colors',
