@@ -1,7 +1,8 @@
 {
-  "name": "vite-react-typescript-starter",
+  "name": "protestodoAlex",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "Sistema de gestão de processos para analistas de RPA/IA — frentes, processos, automações, checklist, timeline e dashboard.",
   "type": "module",
   "scripts": {
     "dev": "vite",
