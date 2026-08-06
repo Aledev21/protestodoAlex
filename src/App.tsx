@@ -98,9 +98,7 @@ export default function App() {
       {/* Sidebar */}
       <aside className="flex w-60 flex-col border-r border-subtle bg-surface">
         <div className="flex items-center gap-2.5 px-5 py-5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-brand-primary to-brand-magenta">
-            <Sparkles className="h-4 w-4 text-white" />
-          </div>
+          <img src="./logo.png" alt="REDESIGN" className="h-8 w-8 rounded-lg object-contain" />
           <div>
             <p className="text-sm font-semibold text-primary">FlowRPA</p>
             <p className="text-[10px] text-tertiary">Gestão de Processos</p>

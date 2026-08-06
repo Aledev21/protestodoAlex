@@ -1,5 +1,5 @@
-import { useState, FormEvent } from 'react';
-import { Sparkles, LogIn, Mail, Lock, Eye, EyeOff, AlertCircle, ArrowLeft } from 'lucide-react';
+import { useState, useEffect, FormEvent } from 'react';
+import { LogIn, Mail, Lock, Eye, EyeOff, AlertCircle, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 
 export default function LoginPage() {
@@ -11,6 +11,13 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<'login' | 'forgot'>('login');
   const [forgotSent, setForgotSent] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    // dispara a animação de entrada
+    const t = setTimeout(() => setMounted(true), 50);
+    return () => clearTimeout(t);
+  }, []);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -22,7 +29,6 @@ export default function LoginPage() {
         setError(error);
         setSubmitting(false);
       }
-      // se sucesso, o onAuthStateChange já cuida de redirecionar
     } else {
       const { error } = await resetPassword(email);
       if (error) {
@@ -36,19 +42,88 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex h-screen items-center justify-center bg-base p-6">
-      <div className="w-full max-w-sm">
+    <div className="relative flex h-screen items-center justify-center overflow-hidden bg-base">
+      {/* ===== Camada de fundo animada ===== */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        {/* gradient base */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#1a0030] via-base to-[#0a0014]" />
+
+        {/* blobs de cor (animados) */}
+        <div
+          className="absolute -left-32 -top-32 h-[480px] w-[480px] rounded-full opacity-40 blur-3xl"
+          style={{
+            background: 'radial-gradient(circle, #9100E2 0%, transparent 70%)',
+            animation: 'float-1 18s ease-in-out infinite',
+          }}
+        />
+        <div
+          className="absolute -right-40 top-1/3 h-[520px] w-[520px] rounded-full opacity-35 blur-3xl"
+          style={{
+            background: 'radial-gradient(circle, #E30294 0%, transparent 70%)',
+            animation: 'float-2 22s ease-in-out infinite',
+          }}
+        />
+        <div
+          className="absolute -bottom-40 left-1/3 h-[420px] w-[420px] rounded-full opacity-30 blur-3xl"
+          style={{
+            background: 'radial-gradient(circle, #FF7401 0%, transparent 70%)',
+            animation: 'float-3 25s ease-in-out infinite',
+          }}
+        />
+        <div
+          className="absolute right-1/4 top-10 h-[300px] w-[300px] rounded-full opacity-25 blur-3xl"
+          style={{
+            background: 'radial-gradient(circle, #D78FFF 0%, transparent 70%)',
+            animation: 'float-4 20s ease-in-out infinite',
+          }}
+        />
+
+        {/* grade sutil */}
+        <div
+          className="absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)',
+            backgroundSize: '48px 48px',
+          }}
+        />
+
+        {/* vinheta */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_transparent_30%,_rgba(0,0,0,0.6)_100%)]" />
+      </div>
+
+      {/* ===== Conteúdo ===== */}
+      <div
+        className={`relative z-10 w-full max-w-sm transition-all duration-700 ${
+          mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+        }`}
+      >
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-brand-primary to-brand-secondary">
-            <Sparkles className="h-6 w-6 text-white" />
+          {/* Logo com glow */}
+          <div className="relative mx-auto mb-5 h-28 w-28">
+            {/* glow atrás da logo */}
+            <div
+              className="absolute inset-0 rounded-full blur-2xl"
+              style={{
+                background: 'radial-gradient(circle, rgba(145,0,226,0.6) 0%, transparent 70%)',
+                animation: 'pulse-glow 3s ease-in-out infinite',
+              }}
+            />
+            <img
+              src="./logo.png"
+              alt="REDESIGN"
+              className="relative h-full w-full object-contain drop-shadow-2xl"
+              style={{ animation: 'logo-float 6s ease-in-out infinite' }}
+            />
           </div>
-          <h1 className="text-2xl font-semibold text-primary">Workflow RPA</h1>
+          <h1 className="bg-gradient-to-r from-brand-pale via-brand-light to-brand-magenta bg-clip-text text-2xl font-bold tracking-tight text-transparent">
+            Workflow RPA
+          </h1>
           <p className="mt-1 text-sm text-tertiary">
             {mode === 'login' ? 'Entre com sua conta' : 'Recupere sua senha'}
           </p>
         </div>
 
-        <div className="rounded-2xl border border-subtle bg-surface p-6 shadow-2xl">
+        <div className="rounded-2xl border border-subtle/60 bg-surface/70 p-6 shadow-2xl backdrop-blur-xl">
           {forgotSent ? (
             <div className="text-center">
               <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
@@ -78,7 +153,7 @@ export default function LoginPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="seu@email.com"
                     autoComplete="email"
-                    className="w-full rounded-lg border border-default bg-elevated py-2.5 pl-10 pr-3 text-sm text-primary placeholder:text-tertiary focus:border-brand-primary focus:outline-none transition-colors"
+                    className="w-full rounded-lg border border-default bg-elevated/60 py-2.5 pl-10 pr-3 text-sm text-primary placeholder:text-tertiary focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary/50 transition-colors"
                   />
                 </div>
               </div>
@@ -95,7 +170,7 @@ export default function LoginPage() {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
                       autoComplete="current-password"
-                      className="w-full rounded-lg border border-default bg-elevated py-2.5 pl-10 pr-10 text-sm text-primary placeholder:text-tertiary focus:border-brand-primary focus:outline-none transition-colors"
+                      className="w-full rounded-lg border border-default bg-elevated/60 py-2.5 pl-10 pr-10 text-sm text-primary placeholder:text-tertiary focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary/50 transition-colors"
                     />
                     <button
                       type="button"
@@ -118,8 +193,10 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-brand-primary to-brand-secondary py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-lg bg-gradient-to-r from-brand-deep via-brand-primary to-brand-magenta py-2.5 text-sm font-semibold text-white transition-all hover:shadow-lg hover:shadow-brand-primary/40 disabled:opacity-50"
               >
+                {/* shine effect no hover */}
+                <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
                 {submitting ? (
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                 ) : (
@@ -133,7 +210,7 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() => { setMode('forgot'); setError(null); }}
-                    className="text-tertiary hover:text-secondary transition-colors"
+                    className="text-tertiary hover:text-brand-light transition-colors"
                   >
                     Esqueci minha senha
                   </button>
@@ -155,6 +232,34 @@ export default function LoginPage() {
           Acesso restrito · Workflow RPA © 2026
         </p>
       </div>
+
+      {/* keyframes injetados no <head> via style tag */}
+      <style>{`
+        @keyframes float-1 {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(80px, 60px) scale(1.1); }
+        }
+        @keyframes float-2 {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(-100px, 40px) scale(1.15); }
+        }
+        @keyframes float-3 {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(60px, -80px) scale(0.95); }
+        }
+        @keyframes float-4 {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(-50px, 70px) scale(1.08); }
+        }
+        @keyframes pulse-glow {
+          0%, 100% { opacity: 0.5; transform: scale(0.95); }
+          50% { opacity: 0.85; transform: scale(1.05); }
+        }
+        @keyframes logo-float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-6px); }
+        }
+      `}</style>
     </div>
   );
 }
