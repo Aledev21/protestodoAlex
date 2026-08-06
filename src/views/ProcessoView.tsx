@@ -231,7 +231,10 @@ export default function ProcessoView({
   return (
     <div className="animate-fade-in">
       {/* Header */}
-      <div className="border-b border-subtle bg-surface px-8 py-4">
+      <div className="relative border-b border-subtle bg-surface px-8 py-4 overflow-hidden">
+        {/* gradient accent no fundo do header */}
+        <div className="absolute inset-0 bg-gradient-to-r from-brand-deep/20 via-brand-primary/10 to-transparent pointer-events-none" />
+        <div className="relative">
         <button onClick={onBack} className="mb-3 flex items-center gap-1.5 text-xs text-tertiary hover:text-secondary transition-colors">
           <ArrowLeft className="h-3.5 w-3.5" />
           Voltar
@@ -259,6 +262,7 @@ export default function ProcessoView({
             />
           </div>
         </div>
+        </div>
       </div>
 
       {/* Stage progress bar */}
@@ -275,7 +279,7 @@ export default function ProcessoView({
               title={etapa.label}
               className={`h-1.5 flex-1 rounded-full transition-all ${
                 idx <= etapaIdx
-                  ? 'bg-brand-primary'
+                  ? 'bg-gradient-to-r from-brand-primary to-brand-magenta'
                   : 'bg-elevated hover:bg-hover-state'
               }`}
             />

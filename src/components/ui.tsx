@@ -61,8 +61,8 @@ export function Button({
   disabled?: boolean;
 }) {
   const variants = {
-    primary: 'bg-brand-primary text-white hover:bg-brand-primary transition-colors',
-    secondary: 'bg-elevated text-primary border border-default hover:bg-hover-state transition-colors',
+    primary: 'bg-gradient-to-r from-brand-deep via-brand-primary to-brand-magenta text-white shadow-md shadow-brand-primary/20 hover:shadow-lg hover:shadow-brand-primary/40 hover:brightness-110 transition-all',
+    secondary: 'bg-elevated text-primary border border-default hover:border-brand-primary/50 hover:bg-hover-state transition-colors',
     ghost: 'text-secondary hover:bg-hover-state hover:text-primary transition-colors',
     danger: 'bg-red-600/90 text-white hover:bg-red-500 transition-colors',
   };
@@ -83,9 +83,9 @@ export function Button({
   );
 }
 
-export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
+export function Card({ children, className = '', hoverable = false }: { children: ReactNode; className?: string; hoverable?: boolean }) {
   return (
-    <div className={`rounded-xl border border-subtle bg-surface ${className}`}>{children}</div>
+    <div className={`rounded-xl border border-subtle bg-surface transition-colors ${hoverable ? 'hover:border-brand-primary/40 hover:shadow-lg hover:shadow-brand-primary/5' : ''} ${className}`}>{children}</div>
   );
 }
 
@@ -101,7 +101,7 @@ export function Avatar({ name, size = 'md' }: { name: string; size?: 'sm' | 'md'
     md: 'h-8 w-8 text-xs',
     lg: 'h-10 w-10 text-sm',
   };
-  const colors = ['bg-brand-primary/30 text-brand-lavender', 'bg-emerald-600/30 text-emerald-300', 'bg-amber-600/30 text-amber-300', 'bg-purple-600/30 text-purple-300', 'bg-cyan-600/30 text-cyan-300', 'bg-rose-600/30 text-rose-300'];
+  const colors = ['bg-brand-primary/30 text-brand-lavender', 'bg-emerald-600/30 text-emerald-300', 'bg-brand-orange/30 text-orange-300', 'bg-brand-magenta/30 text-brand-lavender', 'bg-cyan-600/30 text-cyan-300', 'bg-rose-600/30 text-rose-300'];
   const colorIndex = name.charCodeAt(0) % colors.length;
   return (
     <div className={`flex items-center justify-center rounded-full font-semibold ${colors[colorIndex]} ${sizes[size]}`}>
@@ -114,7 +114,7 @@ export function ProgressBar({ value, className = '' }: { value: number; classNam
   return (
     <div className={`h-1.5 w-full overflow-hidden rounded-full bg-elevated ${className}`}>
       <div
-        className="h-full rounded-full bg-brand-primary transition-all duration-500"
+        className="h-full rounded-full bg-gradient-to-r from-brand-primary to-brand-magenta transition-all duration-500"
         style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
       />
     </div>

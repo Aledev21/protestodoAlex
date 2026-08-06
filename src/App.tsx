@@ -101,19 +101,24 @@ function AuthenticatedApp({ user, signOut }: { user: any; signOut: () => void })
     <div className="flex h-screen overflow-hidden bg-base">
       {/* Sidebar */}
       <aside className="flex w-60 flex-col border-r border-subtle bg-surface">
-        <div className="flex items-center gap-2.5 px-5 py-5">
-          <img src="./logo.png" alt="REDESIGN" className="h-8 w-8 rounded-lg object-contain" />
-          <div>
-            <p className="text-sm font-semibold text-primary">FlowRPA</p>
-            <p className="text-[10px] text-tertiary">Gestão de Processos</p>
+        {/* Header com gradient */}
+        <div className="relative overflow-hidden border-b border-subtle px-5 py-5">
+          <div className="absolute inset-0 bg-gradient-to-br from-brand-deep/30 via-brand-primary/10 to-brand-magenta/20" />
+          <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-brand-primary/30 blur-2xl" />
+          <div className="relative flex items-center gap-2.5">
+            <img src="./logo.png" alt="REDESIGN" className="h-9 w-9 rounded-lg object-contain" />
+            <div>
+              <p className="bg-gradient-to-r from-brand-pale to-brand-light bg-clip-text text-sm font-bold tracking-tight text-transparent">FlowRPA</p>
+              <p className="text-[10px] text-tertiary">Gestão de Processos</p>
+            </div>
           </div>
         </div>
 
         <button
           onClick={() => setSearchOpen(true)}
-          className="mx-3 mb-3 flex items-center gap-2 rounded-lg border border-subtle bg-elevated px-3 py-2 text-xs text-tertiary transition-colors hover:border-default hover:text-secondary"
+          className="group mx-3 mb-3 mt-3 flex items-center gap-2 rounded-lg border border-subtle bg-elevated px-3 py-2 text-xs text-tertiary transition-all hover:border-brand-primary/50 hover:bg-hover-state hover:text-secondary"
         >
-          <Search className="h-3.5 w-3.5" />
+          <Search className="h-3.5 w-3.5 transition-colors group-hover:text-brand-light" />
           <span>Pesquisar...</span>
           <kbd className="ml-auto rounded bg-base px-1.5 py-0.5 text-[10px] text-tertiary">⌘K</kbd>
         </button>
@@ -126,19 +131,22 @@ function AuthenticatedApp({ user, signOut }: { user: any; signOut: () => void })
               <button
                 key={item.id}
                 onClick={() => setView({ name: item.id as any })}
-                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+                className={`relative flex w-full items-center gap-3 overflow-hidden rounded-lg px-3 py-2 text-sm transition-colors ${
                   active
-                    ? 'bg-brand-primary/10 text-brand-light font-medium'
+                    ? 'text-white font-medium shadow-md shadow-brand-primary/20'
                     : 'text-secondary hover:bg-hover-state hover:text-primary'
                 }`}
               >
-                <Icon className="h-4 w-4" />
-                {item.label}
+                {active && (
+                  <span className="absolute inset-0 bg-gradient-to-r from-brand-deep via-brand-primary to-brand-magenta" />
+                )}
+                <Icon className={`relative h-4 w-4 ${active ? 'text-white' : ''}`} />
+                <span className="relative">{item.label}</span>
                 {item.id === 'frentes' && processoCount > 0 && (
-                  <span className="ml-auto text-[10px] text-tertiary">{processoCount}</span>
+                  <span className={`relative ml-auto text-[10px] ${active ? 'text-white/80' : 'text-tertiary'}`}>{processoCount}</span>
                 )}
                 {item.id === 'dashboard' && blockedCount > 0 && (
-                  <span className="ml-auto flex h-4 w-4 items-center justify-center rounded-full bg-red-500/20 text-[9px] text-red-400">
+                  <span className="relative ml-auto flex h-4 w-4 items-center justify-center rounded-full bg-red-500/30 text-[9px] text-white">
                     {blockedCount}
                   </span>
                 )}
@@ -170,6 +178,8 @@ function AuthenticatedApp({ user, signOut }: { user: any; signOut: () => void })
 
       {/* Main content */}
       <main className="flex-1 overflow-y-auto">
+        {/* Accent line no topo */}
+        <div className="h-0.5 bg-gradient-to-r from-brand-deep via-brand-primary via-brand-magenta to-brand-orange opacity-60" />
         <ViewErrorBoundary resetKey={view.name + (view.name === 'processo' || view.name === 'automacao' ? view.id : '')}>
           {view.name === 'dashboard' && (
             <Dashboard processos={processos} frentes={frentes} loading={processosLoading} onNavigate={navigate} />
