@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { LogIn, Mail, Lock, Eye, EyeOff, AlertCircle, ArrowLeft } from 'lucide-react';
+import { LogIn, Mail, Lock, Eye, EyeOff, AlertCircle, ArrowLeft, Sparkles } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 
 export default function LoginPage() {
@@ -98,22 +98,18 @@ export default function LoginPage() {
         }`}
       >
         <div className="mb-8 text-center">
-          {/* Logo com glow */}
-          <div className="relative mx-auto mb-5 h-28 w-28">
-            {/* glow atrás da logo */}
+          {/* marca minimal — só o ícone, sem imagem */}
+          <div className="relative mx-auto mb-4 inline-flex">
             <div
-              className="absolute inset-0 rounded-full blur-2xl"
+              className="absolute inset-0 rounded-full blur-xl"
               style={{
-                background: 'radial-gradient(circle, rgba(145,0,226,0.6) 0%, transparent 70%)',
+                background: 'radial-gradient(circle, rgba(145,0,226,0.4) 0%, transparent 70%)',
                 animation: 'pulse-glow 3s ease-in-out infinite',
               }}
             />
-            <img
-              src="./logo.png"
-              alt="REDESIGN"
-              className="relative h-full w-full object-contain drop-shadow-2xl"
-              style={{ animation: 'logo-float 6s ease-in-out infinite' }}
-            />
+            <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-primary to-brand-magenta shadow-lg shadow-brand-primary/30">
+              <Sparkles className="h-5 w-5 text-white" />
+            </div>
           </div>
           <h1 className="bg-gradient-to-r from-brand-pale via-brand-light to-brand-magenta bg-clip-text text-2xl font-bold tracking-tight text-transparent">
             Workflow RPA
@@ -254,10 +250,6 @@ export default function LoginPage() {
         @keyframes pulse-glow {
           0%, 100% { opacity: 0.5; transform: scale(0.95); }
           50% { opacity: 0.85; transform: scale(1.05); }
-        }
-        @keyframes logo-float {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-6px); }
         }
       `}</style>
     </div>
