@@ -24,6 +24,20 @@ jobs:
           node-version: 20
           cache: 'npm'
       - run: npm ci
+      - name: Verify Supabase secrets
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$VITE_SUPABASE_URL" ]; then
+            echo "::error::VITE_SUPABASE_URL is empty. Add it in Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          if [ -z "$VITE_SUPABASE_ANON_KEY" ]; then
+            echo "::error::VITE_SUPABASE_ANON_KEY is empty. Add it in Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          echo "Env vars OK (URL starts with: ${VITE_SUPABASE_URL:0:30}...)"
       - run: npm run build
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
