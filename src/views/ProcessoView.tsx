@@ -279,7 +279,7 @@ export default function ProcessoView({
               title={etapa.label}
               className={`h-1.5 flex-1 rounded-full transition-all ${
                 idx <= etapaIdx
-                  ? 'bg-gradient-to-r from-brand-primary to-brand-magenta'
+                  ? 'bg-brand-primary'
                   : 'bg-elevated hover:bg-hover-state'
               }`}
             />

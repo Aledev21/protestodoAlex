@@ -111,7 +111,7 @@ export default function LoginPage() {
               <Sparkles className="h-5 w-5 text-white" />
             </div>
           </div>
-          <h1 className="bg-gradient-to-r from-brand-pale via-brand-light to-brand-magenta bg-clip-text text-2xl font-bold tracking-tight text-transparent">
+          <h1 className="text-2xl font-bold tracking-tight text-primary">
             Workflow RPA
           </h1>
           <p className="mt-1 text-sm text-tertiary">
@@ -189,7 +189,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-lg bg-gradient-to-r from-brand-deep via-brand-primary to-brand-magenta py-2.5 text-sm font-semibold text-white transition-all hover:shadow-lg hover:shadow-brand-primary/40 disabled:opacity-50"
+                className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-lg bg-brand-primary py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-deep disabled:opacity-50"
               >
                 {/* shine effect no hover */}
                 <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />

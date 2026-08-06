@@ -108,7 +108,7 @@ function AuthenticatedApp({ user, signOut }: { user: any; signOut: () => void })
           <div className="relative flex items-center gap-2.5">
             <img src="./logo.png" alt="REDESIGN" className="h-9 w-9 rounded-lg object-contain" />
             <div>
-              <p className="bg-gradient-to-r from-brand-pale to-brand-light bg-clip-text text-sm font-bold tracking-tight text-transparent">FlowRPA</p>
+              <p className="text-sm font-bold tracking-tight text-primary">FlowRPA</p>
               <p className="text-[10px] text-tertiary">Gestão de Processos</p>
             </div>
           </div>
@@ -138,7 +138,7 @@ function AuthenticatedApp({ user, signOut }: { user: any; signOut: () => void })
                 }`}
               >
                 {active && (
-                  <span className="absolute inset-0 bg-gradient-to-r from-brand-deep via-brand-primary to-brand-magenta" />
+                  <span className="absolute inset-0 bg-brand-primary" />
                 )}
                 <Icon className={`relative h-4 w-4 ${active ? 'text-white' : ''}`} />
                 <span className="relative">{item.label}</span>
@@ -178,8 +178,8 @@ function AuthenticatedApp({ user, signOut }: { user: any; signOut: () => void })
 
       {/* Main content */}
       <main className="flex-1 overflow-y-auto">
-        {/* Accent line no topo */}
-        <div className="h-0.5 bg-gradient-to-r from-brand-deep via-brand-primary via-brand-magenta to-brand-orange opacity-60" />
+        {/* Accent line no topo (sólida) */}
+        <div className="h-0.5 bg-brand-primary opacity-60" />
         <ViewErrorBoundary resetKey={view.name + (view.name === 'processo' || view.name === 'automacao' ? view.id : '')}>
           {view.name === 'dashboard' && (
             <Dashboard processos={processos} frentes={frentes} loading={processosLoading} onNavigate={navigate} />
