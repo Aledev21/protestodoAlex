@@ -142,7 +142,7 @@ export default function KanbanView({
                   onDrop={(e) => handleDrop(e, col.value)}
                   className={`flex-1 space-y-2 overflow-y-auto rounded-xl p-2 transition-all duration-200 ${
                     isDropTarget
-                      ? 'bg-blue-500/10 ring-2 ring-blue-500/40 scale-[1.01]'
+                      ? 'bg-brand-primary/10 ring-2 ring-brand-primary/40 scale-[1.01]'
                       : 'bg-surface/50'
                   }`}
                 >

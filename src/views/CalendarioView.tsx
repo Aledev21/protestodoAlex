@@ -76,8 +76,8 @@ export default function CalendarioView({
             const dayProcessos = processosByDate[dateStr] || [];
             const overdue = dayProcessos.some((p) => p.status !== 'concluido' && new Date(dateStr) < today);
             return (
-              <div key={idx} className={`min-h-[100px] border-b border-r border-subtle p-1.5 ${isToday(day) ? 'bg-blue-500/5' : ''}`}>
-                <div className={`mb-1 flex h-6 w-6 items-center justify-center rounded-full text-xs ${isToday(day) ? 'bg-blue-500 text-white font-semibold' : 'text-secondary'}`}>
+              <div key={idx} className={`min-h-[100px] border-b border-r border-subtle p-1.5 ${isToday(day) ? 'bg-brand-primary/5' : ''}`}>
+                <div className={`mb-1 flex h-6 w-6 items-center justify-center rounded-full text-xs ${isToday(day) ? 'bg-brand-primary text-white font-semibold' : 'text-secondary'}`}>
                   {day}
                 </div>
                 <div className="space-y-1">

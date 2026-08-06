@@ -83,14 +83,14 @@ export default function AutomacaoView({ automacaoId, onBack }: { automacaoId: st
             <Card className="p-5">
               <div className="mb-3 flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-primary">Progresso</h3>
-                <span className="text-2xl font-bold text-blue-400">{automacao.progresso}%</span>
+                <span className="text-2xl font-bold text-brand-light">{automacao.progresso}%</span>
               </div>
               <ProgressBar value={automacao.progresso} className="h-2.5" />
               <div className="mt-4 flex gap-2">
                 {[0, 25, 50, 75, 100].map((v) => (
                   <button key={v} onClick={() => update('progresso', v)}
                     className={`flex-1 rounded-lg border py-1.5 text-xs transition-colors ${
-                      automacao.progresso === v ? 'border-blue-500 bg-blue-500/10 text-blue-400' : 'border-subtle text-tertiary hover:border-default'
+                      automacao.progresso === v ? 'border-brand-primary bg-brand-primary/10 text-brand-light' : 'border-subtle text-tertiary hover:border-default'
                     }`}>
                     {v}%
                   </button>
@@ -109,7 +109,7 @@ export default function AutomacaoView({ automacaoId, onBack }: { automacaoId: st
                 onChange={(e) => update('documentacao', e.target.value)}
                 placeholder="Documentação técnica da automação..."
                 rows={4}
-                className="w-full resize-none rounded-lg border border-default bg-elevated px-3 py-2 text-sm text-primary placeholder:text-tertiary focus:border-blue-500 focus:outline-none"
+                className="w-full resize-none rounded-lg border border-default bg-elevated px-3 py-2 text-sm text-primary placeholder:text-tertiary focus:border-brand-primary focus:outline-none"
               />
             </Card>
 
@@ -123,7 +123,7 @@ export default function AutomacaoView({ automacaoId, onBack }: { automacaoId: st
                   <div key={item.id} className="flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-hover-state group">
                     <button onClick={() => toggleCheck(item.id, item.concluido)}
                       className={`flex h-4 w-4 items-center justify-center rounded border ${
-                        item.concluido ? 'border-blue-500 bg-blue-500 text-white' : 'border-default'
+                        item.concluido ? 'border-brand-primary bg-brand-primary text-white' : 'border-default'
                       }`}>
                       {item.concluido && <Check className="h-3 w-3" />}
                     </button>
@@ -136,7 +136,7 @@ export default function AutomacaoView({ automacaoId, onBack }: { automacaoId: st
                 <div className="mt-2 flex gap-2 px-2">
                   <input value={newChecklist} onChange={(e) => setNewChecklist(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && addCheck()}
-                    placeholder="Novo item..." className="flex-1 rounded-lg border border-default bg-elevated px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none" />
+                    placeholder="Novo item..." className="flex-1 rounded-lg border border-default bg-elevated px-3 py-1.5 text-sm focus:border-brand-primary focus:outline-none" />
                   <Button size="sm" onClick={addCheck}>Add</Button>
                 </div>
               </div>

@@ -68,7 +68,7 @@ export default function Dashboard({
   const maxResp = Math.max(...Object.values(stats.porResponsavel), 1);
 
   const kpis = [
-    { label: 'Total de Processos', value: stats.totalProcessos, icon: FileText, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+    { label: 'Total de Processos', value: stats.totalProcessos, icon: FileText, color: 'text-brand-light', bg: 'bg-brand-primary/10' },
     { label: 'Total de Automações', value: stats.totalAutomacoes, icon: Layers, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
     { label: 'Em Andamento', value: stats.emAndamento, icon: Activity, color: 'text-cyan-400', bg: 'bg-cyan-500/10' },
     { label: 'Concluídos', value: stats.concluidos, icon: CheckCircle2, color: 'text-green-400', bg: 'bg-green-500/10' },
@@ -87,7 +87,7 @@ export default function Dashboard({
         </div>
         <button
           onClick={() => onNavigate({ name: 'ai' })}
-          className="flex items-center gap-2 rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-2 text-sm font-medium text-blue-400 transition-colors hover:bg-blue-500/20"
+          className="flex items-center gap-2 rounded-lg border border-brand-primary/30 bg-brand-primary/10 px-3 py-2 text-sm font-medium text-brand-light transition-colors hover:bg-brand-primary/20"
         >
           <Bot className="h-4 w-4" />
           Assistente IA
@@ -164,7 +164,7 @@ export default function Dashboard({
                   </div>
                   <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-elevated">
                     <div
-                      className="h-full rounded-full bg-blue-500"
+                      className="h-full rounded-full bg-brand-primary"
                       style={{ width: `${(data.count / maxCount) * 100}%` }}
                     />
                   </div>

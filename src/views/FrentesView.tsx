@@ -416,7 +416,7 @@ export default function FrentesView({
                                       onClick={() => onOpenProcesso(p.id)}
                                       className="flex flex-1 items-center gap-2.5 text-left min-w-0"
                                     >
-                                      <FileText className="h-4 w-4 flex-shrink-0 text-blue-400" />
+                                      <FileText className="h-4 w-4 flex-shrink-0 text-brand-light" />
                                       <div className="min-w-0 flex-1">
                                         <p className="truncate text-sm font-medium text-primary">{p.nome}</p>
                                         <p className="text-xs text-tertiary">{getEtapaLabel(p.etapa)} · {p.cliente?.nome || 'Sem cliente'}</p>
@@ -504,7 +504,7 @@ export default function FrentesView({
                                 onClick={() => onOpenProcesso(p.id)}
                                 className="group flex w-full items-center gap-3 px-3 py-2 rounded-lg text-left hover:bg-hover-state transition-colors"
                               >
-                                <FileText className="h-4 w-4 flex-shrink-0 text-blue-400" />
+                                <FileText className="h-4 w-4 flex-shrink-0 text-brand-light" />
                                 <div className="min-w-0 flex-1">
                                   <p className="truncate text-sm font-medium text-primary">{p.nome}</p>
                                   <p className="text-xs text-tertiary">{getEtapaLabel(p.etapa)}</p>
@@ -549,7 +549,7 @@ export default function FrentesView({
           <button
             onClick={() => setShowArchived(!showArchived)}
             className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs transition-colors ${
-              showArchived ? 'bg-blue-500/10 text-blue-400' : 'text-tertiary hover:text-secondary'
+              showArchived ? 'bg-brand-primary/10 text-brand-light' : 'text-tertiary hover:text-secondary'
             }`}
           >
             <Archive className="h-3.5 w-3.5" />

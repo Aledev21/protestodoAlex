@@ -35,7 +35,7 @@ export default function AIPanel({
       <Card className="mb-6 overflow-hidden">
         <div className="border-b border-subtle bg-gradient-to-r from-blue-500/10 to-purple-500/10 px-5 py-4">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-blue-400" />
+            <Sparkles className="h-4 w-4 text-brand-light" />
             <h2 className="text-sm font-semibold text-primary">Status Report Automático</h2>
           </div>
         </div>
@@ -62,7 +62,7 @@ export default function AIPanel({
                     <p className="text-sm text-secondary">{risk.message}</p>
                     {risk.processoId && (
                       <button onClick={() => onOpenProcesso(risk.processoId!)}
-                        className="mt-1.5 flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300">
+                        className="mt-1.5 flex items-center gap-1 text-xs text-brand-light hover:text-brand-lavender">
                         Ver processo <ArrowRight className="h-3 w-3" />
                       </button>
                     )}
@@ -91,7 +91,7 @@ export default function AIPanel({
                 onClick={() => action.processoId && onOpenProcesso(action.processoId)}
                 className="flex w-full items-start gap-3 px-5 py-3 text-left hover:bg-hover-state transition-colors"
               >
-                <Zap className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-blue-400" />
+                <Zap className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-brand-light" />
                 <div className="flex-1">
                   <p className="text-sm text-secondary">{action.message}</p>
                   {action.processoName && <p className="mt-0.5 text-xs text-tertiary">{action.processoName}</p>}
@@ -163,7 +163,7 @@ export default function AIPanel({
       <Card className="mt-6">
         <div className="border-b border-subtle px-5 py-4">
           <div className="flex items-center gap-2">
-            <FileText className="h-4 w-4 text-blue-400" />
+            <FileText className="h-4 w-4 text-brand-light" />
             <h2 className="text-sm font-semibold text-primary">Resumo para Reunião</h2>
           </div>
         </div>

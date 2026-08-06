@@ -15,24 +15,24 @@ export const ETAPAS_PROCESSO: { value: string; label: string; group: string }[] 
 ];
 
 export const STATUS_PROCESSO: { value: string; label: string; color: string }[] = [
-  { value: 'em_andamento', label: 'Em Andamento', color: 'blue' },
+  { value: 'em_andamento', label: 'Em Andamento', color: 'brand' },
   { value: 'concluido', label: 'Concluído', color: 'green' },
   { value: 'bloqueado', label: 'Bloqueado', color: 'red' },
-  { value: 'pausado', label: 'Pausado', color: 'amber' },
+  { value: 'pausado', label: 'Pausado', color: 'orange' },
 ];
 
 export const STATUS_AUTOMACAO: { value: string; label: string; color: string }[] = [
   { value: 'nao_iniciado', label: 'Não Iniciado', color: 'slate' },
-  { value: 'em_andamento', label: 'Em Andamento', color: 'blue' },
+  { value: 'em_andamento', label: 'Em Andamento', color: 'brand' },
   { value: 'concluido', label: 'Concluído', color: 'green' },
   { value: 'bloqueado', label: 'Bloqueado', color: 'red' },
-  { value: 'pausado', label: 'Pausado', color: 'amber' },
+  { value: 'pausado', label: 'Pausado', color: 'orange' },
 ];
 
 export const PRIORIDADES: { value: string; label: string; color: string }[] = [
   { value: 'baixa', label: 'Baixa', color: 'slate' },
-  { value: 'media', label: 'Média', color: 'blue' },
-  { value: 'alta', label: 'Alta', color: 'amber' },
+  { value: 'media', label: 'Média', color: 'brand' },
+  { value: 'alta', label: 'Alta', color: 'orange' },
   { value: 'critica', label: 'Crítica', color: 'red' },
 ];
 

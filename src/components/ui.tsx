@@ -61,7 +61,7 @@ export function Button({
   disabled?: boolean;
 }) {
   const variants = {
-    primary: 'bg-blue-600 text-white hover:bg-blue-500 transition-colors',
+    primary: 'bg-brand-primary text-white hover:bg-brand-primary transition-colors',
     secondary: 'bg-elevated text-primary border border-default hover:bg-hover-state transition-colors',
     ghost: 'text-secondary hover:bg-hover-state hover:text-primary transition-colors',
     danger: 'bg-red-600/90 text-white hover:bg-red-500 transition-colors',
@@ -101,7 +101,7 @@ export function Avatar({ name, size = 'md' }: { name: string; size?: 'sm' | 'md'
     md: 'h-8 w-8 text-xs',
     lg: 'h-10 w-10 text-sm',
   };
-  const colors = ['bg-blue-600/30 text-blue-300', 'bg-emerald-600/30 text-emerald-300', 'bg-amber-600/30 text-amber-300', 'bg-purple-600/30 text-purple-300', 'bg-cyan-600/30 text-cyan-300', 'bg-rose-600/30 text-rose-300'];
+  const colors = ['bg-brand-primary/30 text-brand-lavender', 'bg-emerald-600/30 text-emerald-300', 'bg-amber-600/30 text-amber-300', 'bg-purple-600/30 text-purple-300', 'bg-cyan-600/30 text-cyan-300', 'bg-rose-600/30 text-rose-300'];
   const colorIndex = name.charCodeAt(0) % colors.length;
   return (
     <div className={`flex items-center justify-center rounded-full font-semibold ${colors[colorIndex]} ${sizes[size]}`}>
@@ -114,7 +114,7 @@ export function ProgressBar({ value, className = '' }: { value: number; classNam
   return (
     <div className={`h-1.5 w-full overflow-hidden rounded-full bg-elevated ${className}`}>
       <div
-        className="h-full rounded-full bg-blue-500 transition-all duration-500"
+        className="h-full rounded-full bg-brand-primary transition-all duration-500"
         style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
       />
     </div>
@@ -213,7 +213,7 @@ export function Input({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-default bg-elevated px-3 py-2 text-sm text-primary placeholder:text-tertiary focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-colors"
+        className="w-full rounded-lg border border-default bg-elevated px-3 py-2 text-sm text-primary placeholder:text-tertiary focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary/50 transition-colors"
       />
     </label>
   );
@@ -240,7 +240,7 @@ export function TextArea({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
-        className="w-full resize-none rounded-lg border border-default bg-elevated px-3 py-2 text-sm text-primary placeholder:text-tertiary focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-colors"
+        className="w-full resize-none rounded-lg border border-default bg-elevated px-3 py-2 text-sm text-primary placeholder:text-tertiary focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary/50 transition-colors"
       />
     </label>
   );
@@ -269,7 +269,7 @@ export function Select({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-default bg-elevated px-3 py-2 text-sm text-primary focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-colors"
+        className="w-full rounded-lg border border-default bg-elevated px-3 py-2 text-sm text-primary focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary/50 transition-colors"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>

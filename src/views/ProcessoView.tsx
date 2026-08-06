@@ -275,7 +275,7 @@ export default function ProcessoView({
               title={etapa.label}
               className={`h-1.5 flex-1 rounded-full transition-all ${
                 idx <= etapaIdx
-                  ? 'bg-blue-500'
+                  ? 'bg-brand-primary'
                   : 'bg-elevated hover:bg-hover-state'
               }`}
             />
@@ -295,14 +295,14 @@ export default function ProcessoView({
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm transition-colors ${
                   active
-                    ? 'border-blue-500 text-primary font-medium'
+                    ? 'border-brand-primary text-primary font-medium'
                     : 'border-transparent text-tertiary hover:text-secondary'
                 }`}
               >
                 <Icon className="h-4 w-4" />
                 {tab.label}
                 {tab.count !== undefined && tab.count > 0 && (
-                  <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${active ? 'bg-blue-500/20 text-blue-400' : 'bg-elevated text-tertiary'}`}>
+                  <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${active ? 'bg-brand-primary/20 text-brand-light' : 'bg-elevated text-tertiary'}`}>
                     {tab.count}
                   </span>
                 )}
@@ -390,7 +390,7 @@ export default function ProcessoView({
                       <button
                         onClick={() => toggleChecklistItem(item.id, item.concluido)}
                         className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border transition-colors ${
-                          item.concluido ? 'border-blue-500 bg-blue-500 text-white' : 'border-default hover:border-blue-500'
+                          item.concluido ? 'border-brand-primary bg-brand-primary text-white' : 'border-default hover:border-brand-primary'
                         }`}
                       >
                         {item.concluido && <Check className="h-3 w-3" />}
@@ -415,7 +415,7 @@ export default function ProcessoView({
                         onChange={(e) => setNewChecklistText(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && addChecklistItem()}
                         placeholder="Novo item..."
-                        className="flex-1 rounded-lg border border-default bg-elevated px-3 py-1.5 text-sm text-primary placeholder:text-tertiary focus:border-blue-500 focus:outline-none"
+                        className="flex-1 rounded-lg border border-default bg-elevated px-3 py-1.5 text-sm text-primary placeholder:text-tertiary focus:border-brand-primary focus:outline-none"
                       />
                       <Button size="sm" onClick={addChecklistItem}>Add</Button>
                       <Button size="sm" variant="ghost" onClick={() => setShowAddChecklist(false)}>Cancelar</Button>
@@ -526,7 +526,7 @@ export default function ProcessoView({
                 {timeline.map((event, idx) => (
                   <div key={event.id} className="relative flex gap-4">
                     <div className={`relative z-10 mt-1 h-3.5 w-3.5 flex-shrink-0 rounded-full border-2 ${
-                      event.tipo === 'criacao' ? 'border-blue-500 bg-blue-500' :
+                      event.tipo === 'criacao' ? 'border-brand-primary bg-brand-primary' :
                       event.tipo === 'etapa' ? 'border-emerald-500 bg-emerald-500' :
                       event.tipo === 'pendencia' ? 'border-amber-500 bg-amber-500' :
                       'border-default bg-surface'
@@ -602,7 +602,7 @@ export default function ProcessoView({
                   <button
                     onClick={() => setShowArchived(!showArchived)}
                     className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs transition-colors ${
-                      showArchived ? 'bg-blue-500/10 text-blue-400' : 'text-tertiary hover:text-secondary'
+                      showArchived ? 'bg-brand-primary/10 text-brand-light' : 'text-tertiary hover:text-secondary'
                     }`}
                   >
                     <Archive className="h-3.5 w-3.5" />
@@ -622,8 +622,8 @@ export default function ProcessoView({
                   onClick={() => onOpenAutomacao(auto.id)}
                   className="flex min-w-0 flex-1 items-center gap-4 text-left"
                 >
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-blue-500/10">
-                    <Layers className="h-5 w-5 text-blue-400" />
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-brand-primary/10">
+                    <Layers className="h-5 w-5 text-brand-light" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">

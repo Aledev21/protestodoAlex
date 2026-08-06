@@ -63,7 +63,7 @@ export default function ListaView({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar..."
-            className="w-full rounded-lg border border-default bg-surface py-2 pl-9 pr-3 text-sm text-primary placeholder:text-tertiary focus:border-blue-500 focus:outline-none"
+            className="w-full rounded-lg border border-default bg-surface py-2 pl-9 pr-3 text-sm text-primary placeholder:text-tertiary focus:border-brand-primary focus:outline-none"
           />
         </div>
         <Select value={statusFilter} onChange={setStatusFilter}
