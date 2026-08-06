@@ -133,10 +133,14 @@ export default function FrentesView({
       if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
         setFilterOpen(false);
       }
-      // close any menu whose ref does not contain the click target
-      Object.entries(menuRefs.current).forEach(([id, ref]) => {
+      // close any menu whose ref does not contain the click target.
+      // separador "|" porque UUIDs contêm "-" (ex: "abc-123-def")
+      Object.entries(menuRefs.current).forEach(([key, ref]) => {
         if (ref && !ref.contains(e.target as Node)) {
-          const [type, raw] = id.split('-');
+          const sepIdx = key.indexOf('|');
+          if (sepIdx < 0) return;
+          const type = key.slice(0, sepIdx);
+          const raw = key.slice(sepIdx + 1);
           if (type === 'f' && menuOpenFrente === raw) setMenuOpenFrente(null);
           if (type === 's' && menuOpenSetor === raw) setMenuOpenSetor(null);
           if (type === 'p' && menuOpenProcesso === raw) setMenuOpenProcesso(null);
@@ -303,7 +307,7 @@ export default function FrentesView({
                   Novo Processo
                 </Button>
                 {/* 3-dot menu */}
-                <div className="relative flex-shrink-0" ref={(el) => { menuRefs.current[`f-${frente.id}`] = el; }}>
+                <div className="relative flex-shrink-0" ref={(el) => { menuRefs.current[`f|${frente.id}`] = el; }}>
                   <button
                     onClick={(e) => { e.stopPropagation(); setMenuOpenFrente(menuOpenFrente === frente.id ? null : frente.id); }}
                     className="flex h-8 w-8 items-center justify-center rounded-lg text-tertiary hover:bg-elevated hover:text-primary transition-colors"
@@ -376,7 +380,7 @@ export default function FrentesView({
                               <p className="text-sm font-medium text-primary truncate">{setor.nome}</p>
                               <span className="text-xs text-tertiary">{setorProcessos.length} processos</span>
                             </button>
-                            <div className="relative flex-shrink-0" ref={(el) => { menuRefs.current[`s-${setor.id}`] = el; }}>
+                            <div className="relative flex-shrink-0" ref={(el) => { menuRefs.current[`s|${setor.id}`] = el; }}>
                               <button
                                 onClick={(e) => { e.stopPropagation(); setMenuOpenSetor(menuOpenSetor === setor.id ? null : setor.id); }}
                                 className="flex h-7 w-7 items-center justify-center rounded-lg text-tertiary hover:bg-elevated hover:text-primary transition-colors"
@@ -442,7 +446,7 @@ export default function FrentesView({
                                         )}
                                       </div>
                                     </button>
-                                    <div className="relative flex-shrink-0" ref={(el) => { menuRefs.current[`p-${p.id}`] = el; }}>
+                                    <div className="relative flex-shrink-0" ref={(el) => { menuRefs.current[`p|${p.id}`] = el; }}>
                                       <button
                                         onClick={(e) => { e.stopPropagation(); setMenuOpenProcesso(menuOpenProcesso === p.id ? null : p.id); }}
                                         className="flex h-7 w-7 items-center justify-center rounded-lg text-tertiary hover:bg-elevated hover:text-primary transition-colors"
