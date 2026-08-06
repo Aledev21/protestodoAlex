@@ -27,8 +27,9 @@ export default function Dashboard({
     const bloqueados = processos.filter((p) => p.status === 'bloqueado').length;
     const aguardandoCliente = processos.filter((p) => p.etapa === 'aprovacao_cliente' || p.etapa === 'aprovacao_horas').length;
     const atrasados = processos.filter((p) => {
-      if (!p.data_prevista || p.status === 'concluido') return false;
-      return new Date(p.data_prevista) < new Date();
+      if (!p.data_criacao || p.status === 'concluido') return false;
+      const ageDays = (Date.now() - new Date(p.data_criacao).getTime()) / (1000 * 60 * 60 * 24);
+      return ageDays > 30;
     }).length;
 
     const automacoesPorProcesso = totalProcessos > 0 ? (totalAutomacoes / totalProcessos).toFixed(1) : '0';
@@ -60,7 +61,7 @@ export default function Dashboard({
   }, [processos]);
 
   const needsAttention = useMemo(() => {
-    return processos.filter((p) => p.status === 'bloqueado' || (p.data_prevista && new Date(p.data_prevista) < new Date() && p.status !== 'concluido'))
+    return processos.filter((p) => p.status === 'bloqueado')
       .slice(0, 5);
   }, [processos]);
 
@@ -126,7 +127,7 @@ export default function Dashboard({
             )}
             {needsAttention.map((p) => {
               const isBlocked = p.status === 'bloqueado';
-              const isLate = p.data_prevista && new Date(p.data_prevista) < new Date() && p.status !== 'concluido';
+              const isLate = p.status === 'bloqueado';
               return (
                 <button
                   key={p.id}

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import {
   ChevronRight, Plus, FileText, Layers, ArrowLeft, FolderOpen, Filter, Check,
   ChevronDown, MoreVertical, Archive, ArchiveRestore, Trash2, Edit3, AlertOctagon,
-  Building2, Folder,
+  Building2, Folder, Search, X as XIcon,
 } from 'lucide-react';
 import { Processo, Frente, Area, Stakeholder, Cliente } from '../lib/types';
 import { Card, Badge, Button, Modal, Input, TextArea, Select } from '../components/ui';
@@ -44,6 +44,9 @@ export default function FrentesView({
   const [menuOpenFrente, setMenuOpenFrente] = useState<string | null>(null);
   const [menuOpenSetor, setMenuOpenSetor] = useState<string | null>(null);
   const [menuOpenProcesso, setMenuOpenProcesso] = useState<string | null>(null);
+
+  // search
+  const [search, setSearch] = useState('');
 
   // archived toggle
   const [showArchived, setShowArchived] = useState(false);
@@ -112,16 +115,31 @@ export default function FrentesView({
     onRefresh();
   }
 
+  async function archiveProcesso(p: Processo) {
+    const newVal = !p.arquivado;
+    const { error } = await supabase.from('processos').update({ arquivado: newVal }).eq('id', p.id);
+    if (error) {
+      console.error('[archiveProcesso]', error.message);
+      notify('error', 'Erro ao arquivar processo');
+      return;
+    }
+    notify('success', newVal ? 'Processo arquivado' : 'Processo desarquivado');
+    setMenuOpenProcesso(null);
+    onRefresh();
+  }
+
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
         setFilterOpen(false);
       }
+      // close any menu whose ref does not contain the click target
       Object.entries(menuRefs.current).forEach(([id, ref]) => {
         if (ref && !ref.contains(e.target as Node)) {
-          if (menuOpenFrente === id) setMenuOpenFrente(null);
-          if (menuOpenSetor === id) setMenuOpenSetor(null);
-          if (menuOpenProcesso === id) setMenuOpenProcesso(null);
+          const [type, raw] = id.split('-');
+          if (type === 'f' && menuOpenFrente === raw) setMenuOpenFrente(null);
+          if (type === 's' && menuOpenSetor === raw) setMenuOpenSetor(null);
+          if (type === 'p' && menuOpenProcesso === raw) setMenuOpenProcesso(null);
         }
       });
     }
@@ -137,65 +155,110 @@ export default function FrentesView({
 
   const visibleFrentes = frentes.filter((f) => showArchived || !f.arquivado);
 
+  // search: match by frente nome OR by any processo nome within
+  const searchLower = search.toLowerCase().trim();
+  const frenteMatches = (f: Frente) => {
+    if (!searchLower) return true;
+    if (f.nome.toLowerCase().includes(searchLower)) return true;
+    if (f.descricao?.toLowerCase().includes(searchLower)) return true;
+    return processos.some((p) =>
+      p.frente_id === f.id &&
+      (p.nome.toLowerCase().includes(searchLower) ||
+       p.cliente?.nome?.toLowerCase().includes(searchLower) ||
+       p.responsavel?.nome?.toLowerCase().includes(searchLower))
+    );
+  };
+  const searchedFrentes = visibleFrentes.filter(frenteMatches);
+  const totalSearchHits = processos.filter((p) =>
+    !searchLower
+      ? true
+      : p.nome.toLowerCase().includes(searchLower) ||
+        p.cliente?.nome?.toLowerCase().includes(searchLower) ||
+        p.responsavel?.nome?.toLowerCase().includes(searchLower)
+  ).length;
+
   return (
     <div className="mx-auto max-w-7xl px-8 py-8 animate-fade-in">
       {/* Header */}
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-primary">Frentes</h1>
-          <p className="mt-1 text-sm text-tertiary">Organize seus processos por empresa, setor e processo</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="relative" ref={filterRef}>
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold text-primary">Frentes</h1>
+        <p className="mt-1 text-sm text-tertiary">Organize seus processos por empresa, setor e processo</p>
+      </div>
+
+      {/* Search + filters + new */}
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[240px]">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-tertiary" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por nome da empresa ou do processo..."
+            className="w-full rounded-lg border border-default bg-surface py-2 pl-9 pr-9 text-sm text-primary placeholder:text-tertiary focus:border-brand-primary focus:outline-none transition-colors"
+          />
+          {search && (
             <button
-              onClick={() => setFilterOpen(!filterOpen)}
-              className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
-                etapaFilter !== 'all'
-                  ? 'border-blue-500/50 bg-blue-500/10 text-blue-400'
-                  : 'border-default bg-elevated text-secondary hover:bg-hover-state'
-              }`}
+              onClick={() => setSearch('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded text-tertiary hover:bg-hover-state hover:text-primary"
             >
-              <Filter className="h-4 w-4" />
-              <span>{etapaFilterLabel}</span>
-              <ChevronDown className={`h-3.5 w-3.5 transition-transform ${filterOpen ? 'rotate-180' : ''}`} />
+              <XIcon className="h-3.5 w-3.5" />
             </button>
-            {filterOpen && (
-              <div className="absolute right-0 top-full z-20 mt-1.5 w-64 rounded-xl border border-default bg-surface shadow-2xl animate-scale-in">
-                <div className="border-b border-subtle px-3 py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary">Filtrar por etapa</p>
-                </div>
-                <div className="max-h-72 overflow-y-auto p-1.5">
+          )}
+        </div>
+        <div className="relative" ref={filterRef}>
+          <button
+            onClick={() => setFilterOpen(!filterOpen)}
+            className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
+              etapaFilter !== 'all'
+                ? 'border-brand-primary/50 bg-brand-primary/10 text-brand-light'
+                : 'border-default bg-elevated text-secondary hover:bg-hover-state'
+            }`}
+          >
+            <Filter className="h-4 w-4" />
+            <span>{etapaFilterLabel}</span>
+            <ChevronDown className={`h-3.5 w-3.5 transition-transform ${filterOpen ? 'rotate-180' : ''}`} />
+          </button>
+          {filterOpen && (
+            <div className="absolute right-0 top-full z-20 mt-1.5 w-64 rounded-xl border border-default bg-surface shadow-2xl animate-scale-in">
+              <div className="border-b border-subtle px-3 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary">Filtrar por etapa</p>
+              </div>
+              <div className="max-h-72 overflow-y-auto p-1.5">
+                <button
+                  onClick={() => { setEtapaFilter('all'); setFilterOpen(false); }}
+                  className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-sm transition-colors ${
+                    etapaFilter === 'all' ? 'bg-brand-primary/10 text-brand-light' : 'text-secondary hover:bg-hover-state'
+                  }`}
+                >
+                  Todas as etapas
+                  {etapaFilter === 'all' && <Check className="h-4 w-4" />}
+                </button>
+                {ETAPAS_PROCESSO.map((etapa) => (
                   <button
-                    onClick={() => { setEtapaFilter('all'); setFilterOpen(false); }}
+                    key={etapa.value}
+                    onClick={() => { setEtapaFilter(etapa.value); setFilterOpen(false); }}
                     className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-sm transition-colors ${
-                      etapaFilter === 'all' ? 'bg-blue-500/10 text-blue-400' : 'text-secondary hover:bg-hover-state'
+                      etapaFilter === etapa.value ? 'bg-brand-primary/10 text-brand-light' : 'text-secondary hover:bg-hover-state'
                     }`}
                   >
-                    Todas as etapas
-                    {etapaFilter === 'all' && <Check className="h-4 w-4" />}
+                    <span className="flex items-center gap-2 min-w-0">
+                      <span className="text-[10px] text-tertiary flex-shrink-0">{etapa.group}</span>
+                      <span className="truncate">{etapa.label}</span>
+                    </span>
+                    {etapaFilter === etapa.value && <Check className="h-4 w-4 flex-shrink-0" />}
                   </button>
-                  {ETAPAS_PROCESSO.map((etapa) => (
-                    <button
-                      key={etapa.value}
-                      onClick={() => { setEtapaFilter(etapa.value); setFilterOpen(false); }}
-                      className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-sm transition-colors ${
-                        etapaFilter === etapa.value ? 'bg-blue-500/10 text-blue-400' : 'text-secondary hover:bg-hover-state'
-                      }`}
-                    >
-                      <span className="flex items-center gap-2 min-w-0">
-                        <span className="text-[10px] text-tertiary flex-shrink-0">{etapa.group}</span>
-                        <span className="truncate">{etapa.label}</span>
-                      </span>
-                      {etapaFilter === etapa.value && <Check className="h-4 w-4 flex-shrink-0" />}
-                    </button>
-                  ))}
-                </div>
+                ))}
               </div>
-            )}
-          </div>
-          <Button icon={Plus} onClick={() => setShowNewFrente(true)}>Nova Frente</Button>
+            </div>
+          )}
         </div>
+        <Button icon={Plus} onClick={() => setShowNewFrente(true)}>Nova Frente</Button>
       </div>
+
+      {search && (
+        <p className="mb-3 text-xs text-tertiary">
+          {totalSearchHits} resultado(s) para &quot;{search}&quot; em {searchedFrentes.length} empresa(s)
+        </p>
+      )}
 
       {etapaFilter !== 'all' && (
         <p className="mb-4 text-xs text-tertiary">
@@ -205,7 +268,7 @@ export default function FrentesView({
 
       {/* ===== 3-level accordion ===== */}
       <div className="space-y-4">
-        {visibleFrentes.map((frente) => {
+        {searchedFrentes.map((frente) => {
           const frenteSetores = areas.filter((a) => a.frente_id === frente.id);
           const frenteProcessos = processos.filter(
             (p) => p.frente_id === frente.id && (etapaFilter === 'all' || p.etapa === etapaFilter)
@@ -395,6 +458,13 @@ export default function FrentesView({
                                             <Edit3 className="h-4 w-4" /> Editar Processo
                                           </button>
                                           <button
+                                            onClick={() => archiveProcesso(p)}
+                                            className="flex w-full items-center gap-2.5 px-3 py-2.5 text-sm text-secondary hover:bg-hover-state transition-colors"
+                                          >
+                                            {p.arquivado ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+                                            {p.arquivado ? 'Desarquivar' : 'Arquivar'}
+                                          </button>
+                                          <button
                                             onClick={() => { setDeleteProcesso(p); setMenuOpenProcesso(null); }}
                                             className="flex w-full items-center gap-2.5 rounded-b-lg px-3 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
                                           >
@@ -458,12 +528,16 @@ export default function FrentesView({
           );
         })}
 
-        {visibleFrentes.length === 0 && !loading && (
+        {searchedFrentes.length === 0 && !loading && (
           <Card className="p-12">
             <div className="flex flex-col items-center gap-3 text-center">
               <FolderOpen className="h-10 w-10 text-tertiary" />
-              <p className="text-sm text-secondary">Nenhuma frente cadastrada</p>
-              <Button icon={Plus} onClick={() => setShowNewFrente(true)}>Criar primeira frente</Button>
+              <p className="text-sm text-secondary">{search ? 'Nenhum resultado para a busca' : 'Nenhuma frente cadastrada'}</p>
+              {search ? (
+                <Button variant="ghost" onClick={() => setSearch('')}>Limpar busca</Button>
+              ) : (
+                <Button icon={Plus} onClick={() => setShowNewFrente(true)}>Criar primeira frente</Button>
+              )}
             </div>
           </Card>
         )}
@@ -763,12 +837,19 @@ function NewProcessoModal({
   const [clienteId, setClienteId] = useState('');
   const [areaId, setAreaId] = useState('');
   const [responsavelId, setResponsavelId] = useState('');
+  const [smeId, setSmeId] = useState('');
   const [prioridade, setPrioridade] = useState('media');
+  const [objetivo, setObjetivo] = useState('');
+  const [escopo, setEscopo] = useState('');
+  const [caminhoAnexo, setCaminhoAnexo] = useState('');
+  const [volumetria, setVolumetria] = useState('');
+  const [saving, setSaving] = useState('');
   const { notify } = useToast();
 
   useEffect(() => {
     if (open) {
-      setNome(''); setDescricao(''); setClienteId(''); setAreaId(''); setResponsavelId(''); setPrioridade('media');
+      setNome(''); setDescricao(''); setClienteId(''); setAreaId(''); setResponsavelId(''); setSmeId('');
+      setPrioridade('media'); setObjetivo(''); setEscopo(''); setCaminhoAnexo(''); setVolumetria(''); setSaving('');
     }
   }, [open]);
 
@@ -779,6 +860,12 @@ function NewProcessoModal({
       cliente_id: clienteId || null,
       area_id: areaId || null,
       responsavel_id: responsavelId || null,
+      sme: smeId || null,
+      objetivo: objetivo || null,
+      escopo: escopo || null,
+      caminho_anexo: caminhoAnexo || null,
+      volumetria: volumetria || null,
+      saving: saving || null,
       prioridade,
       etapa: 'coleta',
       status: 'em_andamento',
@@ -795,16 +882,19 @@ function NewProcessoModal({
       });
     }
     notify('success', 'Processo criado');
-    setNome(''); setDescricao('');
     onClose();
     onDone();
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Novo Processo">
+    <Modal open={open} onClose={onClose} title="Novo Processo" width="lg">
       <div className="space-y-4">
         <Input label="Nome do Processo" value={nome} onChange={setNome} placeholder="Ex: Amortização de Notas de Crédito" required />
-        <TextArea label="Descrição" value={descricao} onChange={setDescricao} />
+        <div className="grid grid-cols-2 gap-4">
+          <TextArea label="Objetivo" value={objetivo} onChange={setObjetivo} placeholder="Qual o objetivo deste processo?" rows={2} />
+          <TextArea label="Escopo" value={escopo} onChange={setEscopo} placeholder="O que está dentro do escopo?" rows={2} />
+        </div>
+        <Input label="Caminho do Anexo" value={caminhoAnexo} onChange={setCaminhoAnexo} placeholder="C:\\Users\\...\\documento.pdf" />
         <div className="grid grid-cols-2 gap-4">
           <Select label="Setor" value={areaId} onChange={setAreaId}
             options={[{ value: '', label: 'Selecione...' }, ...setores.map((s) => ({ value: s.id, label: s.nome }))]} />
@@ -812,8 +902,15 @@ function NewProcessoModal({
             options={[{ value: '', label: 'Selecione...' }, ...clientes.map((c) => ({ value: c.id, label: c.nome }))]} />
           <Select label="Responsável" value={responsavelId} onChange={setResponsavelId}
             options={[{ value: '', label: 'Selecione...' }, ...stakeholders.map((s) => ({ value: s.id, label: s.nome }))]} />
+          <Select label="SME" value={smeId} onChange={setSmeId}
+            options={[{ value: '', label: 'Selecione...' }, ...stakeholders.map((s) => ({ value: s.id, label: s.nome }))]} />
           <Select label="Prioridade" value={prioridade} onChange={setPrioridade}
             options={PRIORIDADES.map((p) => ({ value: p.value, label: p.label }))} />
+          <div />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <Input label="Volumetria" value={volumetria} onChange={setVolumetria} placeholder="Ex: 500 docs/mês" />
+          <Input label="Saving" value={saving} onChange={setSaving} placeholder="Ex: 40h/mês" />
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
@@ -839,8 +936,14 @@ function EditProcessoModal({
   const [clienteId, setClienteId] = useState('');
   const [areaId, setAreaId] = useState('');
   const [responsavelId, setResponsavelId] = useState('');
+  const [smeId, setSmeId] = useState('');
   const [prioridade, setPrioridade] = useState('media');
   const [status, setStatus] = useState('em_andamento');
+  const [objetivo, setObjetivo] = useState('');
+  const [escopo, setEscopo] = useState('');
+  const [caminhoAnexo, setCaminhoAnexo] = useState('');
+  const [volumetria, setVolumetria] = useState('');
+  const [saving, setSaving] = useState('');
   const { notify } = useToast();
 
   useEffect(() => {
@@ -850,8 +953,14 @@ function EditProcessoModal({
       setClienteId(processo.cliente_id || '');
       setAreaId(processo.area_id || '');
       setResponsavelId(processo.responsavel_id || '');
+      setSmeId(processo.sme || '');
       setPrioridade(processo.prioridade);
       setStatus(processo.status);
+      setObjetivo(processo.objetivo || '');
+      setEscopo(processo.escopo || '');
+      setCaminhoAnexo(processo.caminho_anexo || '');
+      setVolumetria(processo.volumetria || '');
+      setSaving(processo.saving || '');
     }
   }, [processo]);
 
@@ -862,6 +971,12 @@ function EditProcessoModal({
       cliente_id: clienteId || null,
       area_id: areaId || null,
       responsavel_id: responsavelId || null,
+      sme: smeId || null,
+      objetivo: objetivo || null,
+      escopo: escopo || null,
+      caminho_anexo: caminhoAnexo || null,
+      volumetria: volumetria || null,
+      saving: saving || null,
       prioridade, status,
     }).eq('id', processo.id);
     if (error) {
@@ -877,21 +992,31 @@ function EditProcessoModal({
   if (!processo) return null;
 
   return (
-    <Modal open={!!processo} onClose={onClose} title="Editar Processo">
+    <Modal open={!!processo} onClose={onClose} title="Editar Processo" width="lg">
       <div className="space-y-4">
         <Input label="Nome do Processo" value={nome} onChange={setNome} required />
-        <TextArea label="Descrição" value={descricao} onChange={setDescricao} />
+        <div className="grid grid-cols-2 gap-4">
+          <TextArea label="Objetivo" value={objetivo} onChange={setObjetivo} rows={2} />
+          <TextArea label="Escopo" value={escopo} onChange={setEscopo} rows={2} />
+        </div>
+        <Input label="Caminho do Anexo" value={caminhoAnexo} onChange={setCaminhoAnexo} />
         <div className="grid grid-cols-2 gap-4">
           <Select label="Setor" value={areaId} onChange={setAreaId}
-            options={[{ value: '', label: 'Selecione...' }, ...setores.map((s) => ({ value: s.id, label: s.nome }))]} />
+            options={[{ value: '', label: 'Selecione...' }, ...setores.filter((s) => s.frente_id === processo.frente_id).map((s) => ({ value: s.id, label: s.nome }))]} />
           <Select label="Cliente" value={clienteId} onChange={setClienteId}
             options={[{ value: '', label: 'Selecione...' }, ...clientes.map((c) => ({ value: c.id, label: c.nome }))]} />
           <Select label="Responsável" value={responsavelId} onChange={setResponsavelId}
+            options={[{ value: '', label: 'Selecione...' }, ...stakeholders.map((s) => ({ value: s.id, label: s.nome }))]} />
+          <Select label="SME" value={smeId} onChange={setSmeId}
             options={[{ value: '', label: 'Selecione...' }, ...stakeholders.map((s) => ({ value: s.id, label: s.nome }))]} />
           <Select label="Prioridade" value={prioridade} onChange={setPrioridade}
             options={PRIORIDADES.map((p) => ({ value: p.value, label: p.label }))} />
           <Select label="Status" value={status} onChange={setStatus}
             options={STATUS_PROCESSO.map((s) => ({ value: s.value, label: s.label }))} />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <Input label="Volumetria" value={volumetria} onChange={setVolumetria} />
+          <Input label="Saving" value={saving} onChange={setSaving} />
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>

@@ -55,13 +55,18 @@ export const AGUARDANDO_QUEM: { value: string; label: string }[] = [
 export const TIPOS_AUTOMACAO: string[] = ['Dispatcher', 'Performer', 'API', 'IA', 'Outro'];
 
 export const PAPEIS_STAKEHOLDER: { value: string; label: string }[] = [
+  { value: 'ba', label: 'BA (Business Analyst)' },
   { value: 'analista', label: 'Analista Responsável' },
+  { value: 'arquiteto', label: 'Arquiteto' },
   { value: 'gp', label: 'GP' },
   { value: 'cliente', label: 'Cliente' },
   { value: 'sme', label: 'SME' },
   { value: 'lideranca', label: 'Liderança' },
   { value: 'outro', label: 'Outro' },
 ];
+
+// Rótulos curtos para os 3 papéis prioritários exibidos na seção "Pessoas Envolvidas"
+export const PAPEIS_DESTAQUE = ['ba', 'arquiteto', 'gp'] as const;
 
 export function getEtapaLabel(value: string): string {
   return ETAPAS_PROCESSO.find((e) => e.value === value)?.label ?? value;

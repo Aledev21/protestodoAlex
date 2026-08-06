@@ -42,21 +42,26 @@ export interface Processo {
   cliente_id: string | null;
   area_id: string | null;
   responsavel_id: string | null;
+  sme: string | null;
   nome: string;
   descricao: string | null;
   objetivo: string | null;
   escopo: string | null;
+  caminho_anexo: string | null;
+  volumetria: string | null;
+  saving: string | null;
   status: string;
   etapa: string;
   prioridade: string;
+  arquivado: boolean;
   data_criacao: string | null;
-  data_prevista: string | null;
   created_at: string;
   updated_at: string;
   frente?: Frente;
   cliente?: Cliente;
   area?: Area;
   responsavel?: Stakeholder;
+  sme_stakeholder?: Stakeholder;
   processo_stakeholders?: ProcessoStakeholder[];
   automacoes?: Automacao[];
 }

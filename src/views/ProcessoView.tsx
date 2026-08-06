@@ -3,7 +3,7 @@ import {
   ArrowLeft, Plus, Trash2, Check, MessageSquare, Paperclip,
   AlertCircle, Clock, HelpCircle, Link2, OctagonAlert, Users,
   Layers, FileText, Target, GitBranch, Calendar, ChevronRight, X,
-  Archive, ArchiveRestore, MoreVertical, AlertOctagon,
+  Archive, ArchiveRestore, MoreVertical, AlertOctagon, Edit3, Save, FolderOpen,
 } from 'lucide-react';
 import { useProcesso, useTimeline, usePendencias, useChecklist, useComentarios, useAnexos, useStakeholders } from '../lib/hooks';
 import { supabase } from '../lib/supabase';
@@ -11,6 +11,7 @@ import { useToast } from '../components/Toast';
 import { Card, Badge, Button, Modal, Input, TextArea, Select, Avatar, ProgressBar, EmptyState } from '../components/ui';
 import {
   ETAPAS_PROCESSO, STATUS_PROCESSO, PRIORIDADES, TIPOS_PENDENCIA, AGUARDANDO_QUEM,
+  PAPEIS_STAKEHOLDER, PAPEIS_DESTAQUE,
   getEtapaLabel, getStatusLabel, getPrioridadeLabel, getEtapaIndex,
 } from '../lib/constants';
 import { Pendencia, Automacao, Stakeholder } from '../lib/types';
@@ -106,6 +107,48 @@ export default function ProcessoView({
     if (data) setChecklist([...checklist, data]);
     setNewChecklistText('');
     setShowAddChecklist(false);
+  }
+
+  async function removeChecklistItem(id: string) {
+    const { error } = await supabase.from('checklist_items').delete().eq('id', id);
+    if (error) { console.error('[removeChecklistItem]', error.message); notify('error', 'Erro ao remover item'); return; }
+    setChecklist(checklist.filter((c) => c.id !== id));
+  }
+
+  async function upsertProcessoStakeholder(papel: string, stakeholderId: string | null) {
+    if (!stakeholderId) {
+      // remove o vínculo
+      const existing = processo!.processo_stakeholders?.find((ps) => ps.papel === papel);
+      if (existing) {
+        const { error } = await supabase.from('processo_stakeholders').delete().eq('id', existing.id);
+        if (error) { console.error('[upsertProcessoStakeholder]', error.message); notify('error', 'Erro ao remover'); return; }
+        setProcesso({ ...processo!, processo_stakeholders: processo!.processo_stakeholders?.filter((ps) => ps.id !== existing.id) });
+      }
+      return;
+    }
+    const existing = processo!.processo_stakeholders?.find((ps) => ps.papel === papel);
+    if (existing) {
+      const { error } = await supabase.from('processo_stakeholders').update({ stakeholder_id: stakeholderId }).eq('id', existing.id);
+      if (error) { console.error('[upsertProcessoStakeholder]', error.message); notify('error', 'Erro ao atualizar'); return; }
+      setProcesso({
+        ...processo!,
+        processo_stakeholders: processo!.processo_stakeholders?.map((ps) => ps.id === existing.id ? { ...ps, stakeholder_id: stakeholderId, stakeholder: stakeholders.find((s) => s.id === stakeholderId) } : ps),
+      });
+    } else {
+      const { data, error } = await supabase.from('processo_stakeholders').insert({
+        processo_id: processo!.id, papel, stakeholder_id: stakeholderId,
+      }).select('*, stakeholder:stakeholders(*)').single();
+      if (error) { console.error('[upsertProcessoStakeholder]', error.message); notify('error', 'Erro ao vincular'); return; }
+      if (data) {
+        setProcesso({ ...processo!, processo_stakeholders: [...(processo!.processo_stakeholders || []), data] });
+        await supabase.from('timeline_events').insert({
+          processo_id: processo!.id,
+          titulo: `Pessoa adicionada como ${papel.toUpperCase()}`,
+          tipo: 'evento',
+          descricao: data.stakeholder?.nome ?? '',
+        });
+      }
+    }
   }
 
   async function addComment() {
@@ -276,13 +319,53 @@ export default function ProcessoView({
             <div className="space-y-6 lg:col-span-2">
               {/* Info */}
               <Card className="p-5">
-                <div className="grid grid-cols-2 gap-4">
-                  <Field label="Objetivo" value={processo.objetivo} />
-                  <Field label="Escopo" value={processo.escopo} />
-                  <Field label="Cliente" value={processo.cliente?.nome} />
-                  <Field label="Área" value={processo.area?.nome} />
-                  <Field label="Responsável" value={processo.responsavel?.nome} />
-                  <Field label="Data Prevista" value={processo.data_prevista ? new Date(processo.data_prevista).toLocaleDateString('pt-BR') : null} />
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <EditableField label="Objetivo" value={processo.objetivo} onSave={(v) => updateProcesso('objetivo', v)} multiline />
+                    <EditableField label="Escopo" value={processo.escopo} onSave={(v) => updateProcesso('escopo', v)} multiline />
+                  </div>
+
+                  <div>
+                    <p className="mb-1.5 text-xs font-medium text-tertiary">Caminho do Anexo</p>
+                    <div className="flex items-center gap-2">
+                      <FolderOpen className="h-4 w-4 flex-shrink-0 text-tertiary" />
+                      <EditableField
+                        value={processo.caminho_anexo}
+                        onSave={(v) => updateProcesso('caminho_anexo', v)}
+                        placeholder="C:\\Users\\...\\documento.pdf"
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                      <p className="mb-1.5 text-xs font-medium text-tertiary">SME</p>
+                      <Select
+                        value={processo.sme || ''}
+                        onChange={(v) => updateProcesso('sme', v || null)}
+                        options={[{ value: '', label: 'Selecione...' }, ...stakeholders.map((s) => ({ value: s.id, label: s.nome }))]}
+                      />
+                    </div>
+                    <div />
+                    <EditableField label="Volumetria" value={processo.volumetria} onSave={(v) => updateProcesso('volumetria', v)} placeholder="Ex: 500 docs/mês" />
+                    <EditableField label="Saving" value={processo.saving} onSave={(v) => updateProcesso('saving', v)} placeholder="Ex: 40h/mês" />
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3 border-t border-subtle pt-4">
+                    <div>
+                      <p className="mb-1.5 text-xs font-medium text-tertiary">Cliente</p>
+                      <p className="text-sm text-primary">{processo.cliente?.nome || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="mb-1.5 text-xs font-medium text-tertiary">Área</p>
+                      <p className="text-sm text-primary">{processo.area?.nome || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="mb-1.5 text-xs font-medium text-tertiary">Responsável</p>
+                      <p className="text-sm text-primary">{processo.responsavel?.nome || '—'}</p>
+                    </div>
+                  </div>
                 </div>
               </Card>
 
@@ -303,7 +386,7 @@ export default function ProcessoView({
                     <p className="px-2 py-4 text-center text-sm text-tertiary">Nenhum item no checklist</p>
                   )}
                   {checklist.map((item) => (
-                    <div key={item.id} className="flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-hover-state transition-colors">
+                    <div key={item.id} className="group flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-hover-state transition-colors">
                       <button
                         onClick={() => toggleChecklistItem(item.id, item.concluido)}
                         className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border transition-colors ${
@@ -312,9 +395,16 @@ export default function ProcessoView({
                       >
                         {item.concluido && <Check className="h-3 w-3" />}
                       </button>
-                      <span className={`text-sm ${item.concluido ? 'text-tertiary line-through' : 'text-secondary'}`}>
+                      <span className={`flex-1 text-sm ${item.concluido ? 'text-tertiary line-through' : 'text-secondary'}`}>
                         {item.texto}
                       </span>
+                      <button
+                        onClick={() => removeChecklistItem(item.id)}
+                        className="opacity-0 group-hover:opacity-100 flex h-6 w-6 items-center justify-center rounded text-tertiary hover:bg-red-500/10 hover:text-red-400 transition-all"
+                        title="Remover item"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   ))}
                   {showAddChecklist && (
@@ -334,7 +424,7 @@ export default function ProcessoView({
                 </div>
               </Card>
 
-              {/* People */}
+              {/* People — destaque BA / Arquiteto / GP */}
               <Card>
                 <div className="border-b border-subtle px-5 py-3">
                   <div className="flex items-center gap-2">
@@ -342,16 +432,46 @@ export default function ProcessoView({
                     <h3 className="text-sm font-semibold text-primary">Pessoas Envolvidas</h3>
                   </div>
                 </div>
-                <div className="p-4 space-y-2">
-                  {processo.processo_stakeholders?.map((ps) => (
-                    <div key={ps.id} className="flex items-center gap-3">
-                      <Avatar name={ps.stakeholder?.nome || '?'} size="sm" />
-                      <span className="text-sm text-secondary">{ps.stakeholder?.nome}</span>
-                      <Badge color="slate" className="ml-auto">{ps.papel}</Badge>
-                    </div>
-                  ))}
-                  {(!processo.processo_stakeholders || processo.processo_stakeholders.length === 0) && (
-                    <p className="text-sm text-tertiary">Nenhuma pessoa vinculada</p>
+                <div className="p-4 space-y-3">
+                  {PAPEIS_DESTAQUE.map((papel) => {
+                    const info = PAPEIS_STAKEHOLDER.find((p) => p.value === papel);
+                    const ps = processo.processo_stakeholders?.find((p) => p.papel === papel);
+                    return (
+                      <div key={papel} className="flex items-center gap-3">
+                        <span className="w-20 text-xs font-semibold uppercase tracking-wider text-tertiary">{info?.label.split(' ')[0]}</span>
+                        {ps?.stakeholder ? (
+                          <>
+                            <Avatar name={ps.stakeholder.nome} size="sm" />
+                            <span className="text-sm text-primary">{ps.stakeholder.nome}</span>
+                          </>
+                        ) : (
+                          <span className="text-sm text-tertiary italic">— não definido —</span>
+                        )}
+                        <div className="ml-auto w-48">
+                          <Select
+                            value={ps?.stakeholder_id || ''}
+                            onChange={(v) => upsertProcessoStakeholder(papel, v || null)}
+                            options={[{ value: '', label: '...' }, ...stakeholders.map((s) => ({ value: s.id, label: s.nome }))]}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {processo.processo_stakeholders && processo.processo_stakeholders.length > 0 && (
+                    <details className="pt-2 border-t border-subtle">
+                      <summary className="cursor-pointer text-xs text-tertiary hover:text-secondary">Outros papéis ({processo.processo_stakeholders.filter((p) => !PAPEIS_DESTAQUE.includes(p.papel as any)).length})</summary>
+                      <div className="mt-2 space-y-2">
+                        {processo.processo_stakeholders
+                          .filter((p) => !PAPEIS_DESTAQUE.includes(p.papel as any))
+                          .map((ps) => (
+                            <div key={ps.id} className="flex items-center gap-3">
+                              <Avatar name={ps.stakeholder?.nome || '?'} size="sm" />
+                              <span className="text-sm text-secondary">{ps.stakeholder?.nome}</span>
+                              <Badge color="slate" className="ml-auto">{PAPEIS_STAKEHOLDER.find((p) => p.value === ps.papel)?.label ?? ps.papel}</Badge>
+                            </div>
+                          ))}
+                      </div>
+                    </details>
                   )}
                 </div>
               </Card>
@@ -745,5 +865,78 @@ function AddAutomacaoModal({ open, onClose, processoId, stakeholders, onAdd }: {
         </div>
       </div>
     </Modal>
+  );
+}
+
+// ===== Helpers =====
+
+function EditableField({
+  label, value, onSave, multiline = false, placeholder = '', className = '',
+}: {
+  label: string;
+  value: string | null | undefined;
+  onSave: (v: string | null) => void | Promise<void>;
+  multiline?: boolean;
+  placeholder?: string;
+  className?: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value || '');
+
+  useEffect(() => { setDraft(value || ''); }, [value]);
+
+  async function save() {
+    setEditing(false);
+    if ((value || '') === draft) return;
+    await onSave(draft.trim() || null);
+  }
+
+  if (editing) {
+    if (multiline) {
+      return (
+        <div className={className}>
+          <p className="mb-1.5 text-xs font-medium text-tertiary">{label}</p>
+          <textarea
+            autoFocus
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={save}
+            onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) save(); if (e.key === 'Escape') { setDraft(value || ''); setEditing(false); } }}
+            rows={3}
+            placeholder={placeholder}
+            className="w-full rounded-lg border border-brand-primary bg-elevated px-3 py-2 text-sm text-primary placeholder:text-tertiary focus:outline-none"
+          />
+          <p className="mt-1 text-[10px] text-tertiary">Ctrl+Enter salva · Esc cancela</p>
+        </div>
+      );
+    }
+    return (
+      <div className={className}>
+        <p className="mb-1.5 text-xs font-medium text-tertiary">{label}</p>
+        <input
+          autoFocus
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={save}
+          onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') { setDraft(value || ''); setEditing(false); } }}
+          placeholder={placeholder}
+          className="w-full rounded-lg border border-brand-primary bg-elevated px-3 py-1.5 text-sm text-primary placeholder:text-tertiary focus:outline-none"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setEditing(true)}
+      className={`group block w-full rounded-lg border border-transparent px-3 py-1.5 text-left transition-colors hover:border-subtle hover:bg-hover-state ${className}`}
+    >
+      <p className="mb-0.5 text-xs font-medium text-tertiary">{label}</p>
+      <p className="flex items-center gap-2 text-sm text-primary">
+        <span className={value ? '' : 'italic text-tertiary'}>{value || placeholder || '—'}</span>
+        <Edit3 className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100 text-tertiary" />
+      </p>
+    </button>
   );
 }

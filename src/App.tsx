@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   LayoutDashboard, Layers, FolderKanban, List, Calendar, GitBranch,
-  Search, Plus, AlertTriangle, Bot, ChevronRight, Sparkles,
+  Search, Plus, AlertTriangle, Bot, ChevronRight, Sparkles, LogOut,
 } from 'lucide-react';
 import { useFrentes, useProcessos } from './lib/hooks';
+import { useAuth } from './lib/auth';
 import { Processo, Frente } from './lib/types';
 
 import Dashboard from './views/Dashboard';
@@ -17,6 +18,7 @@ import GlobalTimeline from './views/GlobalTimeline';
 import AIPanel from './views/AIPanel';
 import SearchModal from './components/SearchModal';
 import { ViewErrorBoundary } from './components/ErrorBoundary';
+import LoginPage from './views/LoginPage';
 
 type View =
   | { name: 'dashboard' }
@@ -30,12 +32,23 @@ type View =
   | { name: 'ai' };
 
 export default function App() {
+  const { session, loading: authLoading, signOut, user } = useAuth();
   const [view, setView] = useState<View>({ name: 'dashboard' });
   const [searchOpen, setSearchOpen] = useState(false);
   const [navHistory, setNavHistory] = useState<View[]>([]);
 
   const { frentes, loading: frentesLoading, refetch: refetchFrentes } = useFrentes();
   const { processos, loading: processosLoading, refetch: refetchProcessos } = useProcessos();
+
+  // Auth gate
+  if (authLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-base">
+        <span className="h-6 w-6 animate-spin rounded-full border-2 border-brand-primary border-t-transparent" />
+      </div>
+    );
+  }
+  if (!session) return <LoginPage />;
 
   function refreshAll() {
     refetchFrentes();
@@ -85,7 +98,7 @@ export default function App() {
       {/* Sidebar */}
       <aside className="flex w-60 flex-col border-r border-subtle bg-surface">
         <div className="flex items-center gap-2.5 px-5 py-5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-brand-primary to-brand-magenta">
             <Sparkles className="h-4 w-4 text-white" />
           </div>
           <div>
@@ -132,7 +145,7 @@ export default function App() {
           })}
         </nav>
 
-        <div className="border-t border-subtle p-3">
+        <div className="border-t border-subtle p-3 space-y-2">
           <div className="rounded-lg bg-elevated p-3">
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
@@ -142,6 +155,14 @@ export default function App() {
               {blockedCount > 0 ? `${blockedCount} processo(s) bloqueado(s)` : 'Nenhum alerta ativo'}
             </p>
           </div>
+          <button
+            onClick={signOut}
+            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-tertiary transition-colors hover:bg-hover-state hover:text-primary"
+            title={user?.email}
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            <span className="truncate">Sair ({user?.email?.split('@')[0]})</span>
+          </button>
         </div>
       </aside>
 

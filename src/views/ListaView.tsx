@@ -33,8 +33,8 @@ export default function ListaView({
       if (sortBy === 'updated') return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
       if (sortBy === 'created') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       if (sortBy === 'prazo') {
-        const aDate = a.data_prevista ? new Date(a.data_prevista).getTime() : Infinity;
-        const bDate = b.data_prevista ? new Date(b.data_prevista).getTime() : Infinity;
+        const aDate = a.data_criacao ? new Date(a.data_criacao).getTime() : 0;
+        const bDate = b.data_criacao ? new Date(b.data_criacao).getTime() : 0;
         return aDate - bDate;
       }
       if (sortBy === 'prioridade') {

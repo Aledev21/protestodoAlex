@@ -187,15 +187,16 @@ function generateInsights(processos: Processo[]) {
   const andamento = processos.filter((p) => p.status === 'em_andamento').length;
   const bloqueados = processos.filter((p) => p.status === 'bloqueado').length;
   const concluidos = processos.filter((p) => p.status === 'concluido').length;
-  const atrasados = processos.filter((p) => p.data_prevista && new Date(p.data_prevista) < now && p.status !== 'concluido').length;
+  const atrasados = processos.filter((p) => p.status === 'bloqueado' || p.status === 'pausado').length;
 
-  // Risks: overdue
+  // Risks: stale (sem atualização há muito tempo)
   processos.forEach((p) => {
-    if (p.data_prevista && new Date(p.data_prevista) < now && p.status !== 'concluido') {
-      const daysLate = Math.floor((now.getTime() - new Date(p.data_prevista).getTime()) / (1000 * 60 * 60 * 24));
+    if (p.status === 'concluido') return;
+    const daysSince = Math.floor((now.getTime() - new Date(p.updated_at).getTime()) / (1000 * 60 * 60 * 24));
+    if (daysSince > 14) {
       risks.push({
-        message: `"${p.nome}" está atrasado há ${daysLate} dia(s). Prazo era ${new Date(p.data_prevista).toLocaleDateString('pt-BR')}.`,
-        severity: daysLate > 7 ? 'alta' : 'media',
+        message: `"${p.nome}" sem atualização há ${daysSince} dia(s) (última em ${new Date(p.updated_at).toLocaleDateString('pt-BR')}).`,
+        severity: daysSince > 30 ? 'alta' : 'media',
         processoId: p.id,
       });
     }

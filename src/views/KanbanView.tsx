@@ -176,9 +176,9 @@ export default function KanbanView({
                             {p.prioridade}
                           </Badge>
                         </div>
-                        {p.data_prevista && (
+                        {p.data_criacao && (
                           <p className="mt-2 text-[11px] text-tertiary">
-                            Prazo: {new Date(p.data_prevista).toLocaleDateString('pt-BR')}
+                            Criado: {new Date(p.data_criacao).toLocaleDateString('pt-BR')}
                           </p>
                         )}
                       </button>

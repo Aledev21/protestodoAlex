@@ -19,8 +19,8 @@ export default function CalendarioView({
   const processosByDate = useMemo(() => {
     const map: Record<string, Processo[]> = {};
     processos.forEach((p) => {
-      if (p.data_prevista) {
-        const key = p.data_prevista;
+      if (p.data_criacao) {
+        const key = p.data_criacao;
         if (!map[key]) map[key] = [];
         map[key].push(p);
       }

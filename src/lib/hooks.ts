@@ -59,7 +59,9 @@ export function useFrentes() {
 export function useProcessos(filterFn?: (q: any) => any) {
   const { data, loading, refetch } = useSupabaseQuery<Processo>(
     'processos',
-    `*, frente:frentes(*), cliente:clientes(*), area:areas(*), responsavel:stakeholders(*), automacoes(*), processo_stakeholders(stakeholder:stakeholders(*))`,
+    `*, frente:frentes(*), cliente:clientes(*), area:areas(*), responsavel:stakeholders(*),
+     sme_stakeholder:stakeholders!processos_sme_fkey(*),
+     automacoes(*), processo_stakeholders(stakeholder:stakeholders(*))`,
     [],
     filterFn
   );
@@ -80,6 +82,7 @@ export function useProcesso(id: string | null) {
         const { data, error } = await supabase
           .from('processos')
           .select(`*, frente:frentes(*), cliente:clientes(*), area:areas(*), responsavel:stakeholders(*),
+            sme_stakeholder:stakeholders!processos_sme_fkey(*),
             automacoes(*, responsavel:stakeholders(*)),
             processo_stakeholders(*, stakeholder:stakeholders(*))`)
           .eq('id', id)
