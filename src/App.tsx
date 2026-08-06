@@ -1,11 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   LayoutDashboard, Layers, FolderKanban, List, Calendar, GitBranch,
-  Search, Plus, AlertTriangle, Bot, ChevronRight, Sparkles, LogOut,
+  Search, Plus, AlertTriangle, Bot, ChevronRight, LogOut,
 } from 'lucide-react';
 import { useFrentes, useProcessos } from './lib/hooks';
 import { useAuth } from './lib/auth';
-import { Processo, Frente } from './lib/types';
 
 import Dashboard from './views/Dashboard';
 import FrentesView from './views/FrentesView';
@@ -33,14 +32,8 @@ type View =
 
 export default function App() {
   const { session, loading: authLoading, signOut, user } = useAuth();
-  const [view, setView] = useState<View>({ name: 'dashboard' });
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [navHistory, setNavHistory] = useState<View[]>([]);
 
-  const { frentes, loading: frentesLoading, refetch: refetchFrentes } = useFrentes();
-  const { processos, loading: processosLoading, refetch: refetchProcessos } = useProcessos();
-
-  // Auth gate
+  // Auth gate (renderizado antes de chamar hooks que dependem de auth)
   if (authLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-base">
@@ -49,6 +42,17 @@ export default function App() {
     );
   }
   if (!session) return <LoginPage />;
+
+  return <AuthenticatedApp user={user} signOut={signOut} />;
+}
+
+function AuthenticatedApp({ user, signOut }: { user: any; signOut: () => void }) {
+  const [view, setView] = useState<View>({ name: 'dashboard' });
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [navHistory, setNavHistory] = useState<View[]>([]);
+
+  const { frentes, loading: frentesLoading, refetch: refetchFrentes } = useFrentes();
+  const { processos, loading: processosLoading, refetch: refetchProcessos } = useProcessos();
 
   function refreshAll() {
     refetchFrentes();
@@ -75,7 +79,7 @@ export default function App() {
   function goBack() {
     if (navHistory.length === 0) return;
     const last = navHistory[navHistory.length - 1];
-    setNavHistory(prev => prev.slice(0, -1));
+    setNavHistory((prev) => prev.slice(0, -1));
     setView(last);
   }
 
@@ -124,7 +128,7 @@ export default function App() {
                 onClick={() => setView({ name: item.id as any })}
                 className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
                   active
-                    ? 'bg-blue-600/10 text-blue-400 font-medium'
+                    ? 'bg-brand-primary/10 text-brand-light font-medium'
                     : 'text-secondary hover:bg-hover-state hover:text-primary'
                 }`}
               >
