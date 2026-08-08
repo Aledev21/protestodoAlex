@@ -9,6 +9,7 @@ import { useProcesso, useTimeline, usePendencias, useChecklist, useComentarios, 
 import { supabase } from '../lib/supabase';
 import { useToast } from '../components/Toast';
 import { Card, Badge, Button, Modal, Input, TextArea, Select, Avatar, ProgressBar, EmptyState } from '../components/ui';
+import StakeholderAutocomplete from '../components/StakeholderAutocomplete';
 import {
   ETAPAS_PROCESSO, STATUS_PROCESSO, PRIORIDADES, TIPOS_PENDENCIA, AGUARDANDO_QUEM,
   PAPEIS_STAKEHOLDER, PAPEIS_DESTAQUE,
@@ -33,7 +34,7 @@ export default function ProcessoView({
   const { items: checklist, setItems: setChecklist } = useChecklist(processoId);
   const { comentarios, setComentarios } = useComentarios(processoId);
   const { anexos } = useAnexos(processoId);
-  const { stakeholders } = useStakeholders();
+  const { stakeholders, refetch: refetchStakeholders } = useStakeholders();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'pendencias' | 'comments'>('overview');
   const [showAddPendencia, setShowAddPendencia] = useState(false);
@@ -132,6 +133,45 @@ export default function ProcessoView({
         });
       }
     }
+  }
+
+  /**
+   * Handler usado pelo StakeholderAutocomplete.
+   * Cria o stakeholder se `name` foi passado (e não existe case-insensitive),
+   * depois faz o upsert do vínculo. Retorna o id do stakeholder criado/existente
+   * (ou null se o pai deve abortar).
+   */
+  async function upsertPessoaByName(papel: 'ba' | 'arquiteto' | 'gp', name: string): Promise<string | null> {
+    const trimmed = name.trim();
+    if (!trimmed) return null;
+
+    // 1) Já existe algum stakeholder com esse nome? (case-insensitive) — reusa.
+    const existente = stakeholders.find((s) => s.nome.toLowerCase() === trimmed.toLowerCase());
+    let stakeholderId: string | null = existente?.id ?? null;
+
+    // 2) Se não, cria com tipo = papel.
+    if (!stakeholderId) {
+      const { data: created, error } = await supabase
+        .from('stakeholders')
+        .insert({ nome: trimmed, tipo: papel })
+        .select()
+        .single();
+      if (error || !created) {
+        console.error('[upsertPessoaByName:insert]', error?.message);
+        notify('error', `Erro ao criar "${trimmed}"`);
+        return null;
+      }
+      stakeholderId = created.id;
+      notify('success', `"${trimmed}" adicionado como ${papel.toUpperCase()}`);
+      // Recarrega lista de stakeholders para o próximo autocomplete.
+      try { await refetchStakeholders(); } catch { /* ignore */ }
+    }
+
+    // 3) Faz o vínculo (insert ou update).
+    if (stakeholderId) {
+      await upsertProcessoStakeholder(papel, stakeholderId);
+    }
+    return stakeholderId;
   }
 
   async function addComment() {
@@ -315,10 +355,13 @@ export default function ProcessoView({
                             <p className="mb-1.5 text-xs font-medium text-tertiary">
                               {papel === 'ba' ? 'BA (Business Analyst)' : papel === 'arquiteto' ? 'Arquiteto' : 'GP'}
                             </p>
-                            <Select
-                              value={ps?.stakeholder_id || ''}
-                              onChange={(v) => upsertProcessoStakeholder(papel, v || null)}
-                              options={[{ value: '', label: 'Não definido' }, ...stakeholders.map((s) => ({ value: s.id, label: s.nome }))]}
+                            <StakeholderAutocomplete
+                              value={ps?.stakeholder_id ?? null}
+                              stakeholders={stakeholders}
+                              placeholder={papel === 'ba' ? 'Nome do BA...' : papel === 'arquiteto' ? 'Nome do arquiteto...' : 'Nome do GP...'}
+                              onSelect={(id) => upsertProcessoStakeholder(papel, id)}
+                              onCreate={(name) => upsertPessoaByName(papel, name)}
+                              onClear={() => upsertProcessoStakeholder(papel, null)}
                             />
                           </div>
                         );
