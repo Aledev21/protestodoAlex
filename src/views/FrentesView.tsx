@@ -2,11 +2,11 @@ import { useState, useRef, useEffect } from 'react';
 import {
   ChevronRight, Plus, FileText, ArrowLeft, FolderOpen, Filter, Check,
   ChevronDown, Archive, ArchiveRestore, Trash2, Edit3, AlertOctagon,
-  Building2, Folder, Search, X as XIcon,
+  Building2, Folder, Search, X as XIcon, MoreVertical, FileEdit,
 } from 'lucide-react';
 import { Processo, Frente, Area, Stakeholder, Cliente } from '../lib/types';
 import { Card, Badge, Button, Modal, Input, TextArea, Select } from '../components/ui';
-import ThreeDotMenu, { ThreeDotMenuItem } from '../components/ThreeDotMenu';
+import ActionDrawer, { ActionItem } from '../components/ActionDrawer';
 import {
   getStatusLabel, getEtapaLabel, getPrioridadeLabel,
   STATUS_PROCESSO, PRIORIDADES, ETAPAS_PROCESSO,
@@ -14,6 +14,11 @@ import {
 import { useStakeholders, useClientes, useAreas } from '../lib/hooks';
 import { useToast } from '../components/Toast';
 import { supabase } from '../lib/supabase';
+
+type DrawerTarget =
+  | { type: 'frente'; item: Frente }
+  | { type: 'setor'; item: Area; frenteNome: string }
+  | { type: 'processo'; item: Processo; frenteNome: string };
 
 export default function FrentesView({
   frentes,
@@ -42,10 +47,10 @@ export default function FrentesView({
   const [etapaFilters, setEtapaFilters] = useState<Set<string>>(new Set());
   const [filterOpen, setFilterOpen] = useState(false);
 
-  // 3-dot menus (controlados por id). Apenas 1 aberto por vez.
-  const [menuOpenFrente, setMenuOpenFrente] = useState<string | null>(null);
-  const [menuOpenSetor, setMenuOpenSetor] = useState<string | null>(null);
-  const [menuOpenProcesso, setMenuOpenProcesso] = useState<string | null>(null);
+  // Drawer lateral único para as ações de frente/setor/processo.
+  // Garante que só 1 drawer fica aberto por vez, sem ter 3 estados paralelos.
+  const [drawer, setDrawer] = useState<DrawerTarget | null>(null);
+  const closeDrawer = () => setDrawer(null);
 
   // search
   const [search, setSearch] = useState('');
@@ -91,7 +96,6 @@ export default function FrentesView({
       return;
     }
     notify('success', newVal ? 'Empresa arquivada' : 'Empresa desarquivada');
-    setMenuOpenFrente(null);
     onRefresh();
   }
   async function deleteFrentePermanently(frente: Frente) {
@@ -125,7 +129,6 @@ export default function FrentesView({
       return;
     }
     notify('success', newVal ? 'Setor arquivado' : 'Setor desarquivado');
-    setMenuOpenSetor(null);
     refetchAreas();
     onRefresh();
   }
@@ -150,7 +153,6 @@ export default function FrentesView({
       return;
     }
     notify('success', newVal ? 'Processo arquivado' : 'Processo desarquivado');
-    setMenuOpenProcesso(null);
     onRefresh();
   }
 
@@ -336,20 +338,15 @@ export default function FrentesView({
                 <Button size="sm" variant="secondary" icon={Plus} onClick={() => setShowNewProcesso(frente.id)}>
                   Novo Processo
                 </Button>
-                {/* 3-dot menu — usa position:fixed para escapar overflow */}
-                <ThreeDotMenu
-                  open={menuOpenFrente === frente.id}
-                  onOpenChange={(o) => {
-                    setMenuOpenFrente(o ? frente.id : null);
-                    if (o) { setMenuOpenSetor(null); setMenuOpenProcesso(null); }
-                  }}
-                  items={buildFrenteMenu(frente, {
-                    onEdit: () => setEditFrente(frente),
-                    onNewSetor: () => setShowNewSetor(frente.id),
-                    onArchive: () => archiveFrente(frente),
-                    onDelete: () => setDeleteFrente(frente),
-                  })}
-                />
+                {/* Botão que abre o drawer lateral de ações */}
+                <button
+                  type="button"
+                  onClick={() => setDrawer({ type: 'frente', item: frente })}
+                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-tertiary transition-colors hover:bg-elevated hover:text-primary"
+                  aria-label="Ações da empresa"
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </button>
               </div>
 
               {/* --- Level 2: Setores --- */}
@@ -386,19 +383,14 @@ export default function FrentesView({
                               {setor.arquivado && <Badge color="slate">Arquivado</Badge>}
                               <span className="text-xs text-tertiary">{setorProcessos.length} processos</span>
                             </button>
-                            <ThreeDotMenu
-                              open={menuOpenSetor === setor.id}
-                              onOpenChange={(o) => {
-                                setMenuOpenSetor(o ? setor.id : null);
-                                if (o) { setMenuOpenFrente(null); setMenuOpenProcesso(null); }
-                              }}
-                              items={buildSetorMenu(setor, {
-                                onEdit: () => setEditSetor(setor),
-                                onNewProcesso: () => setShowNewProcesso(frente.id),
-                                onArchive: () => archiveSetor(setor),
-                                onDelete: () => setDeleteSetor(setor),
-                              })}
-                            />
+                            <button
+                              type="button"
+                              onClick={() => setDrawer({ type: 'setor', item: setor, frenteNome: frente.nome })}
+                              className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-tertiary transition-colors hover:bg-elevated hover:text-primary"
+                              aria-label="Ações do setor"
+                            >
+                              <MoreVertical className="h-3.5 w-3.5" />
+                            </button>
                           </div>
 
                           {/* --- Level 3: Processos --- */}
@@ -429,19 +421,14 @@ export default function FrentesView({
                                       </Badge>
                                     </div>
                                   </button>
-                                  <ThreeDotMenu
-                                    open={menuOpenProcesso === p.id}
-                                    onOpenChange={(o) => {
-                                      setMenuOpenProcesso(o ? p.id : null);
-                                      if (o) { setMenuOpenFrente(null); setMenuOpenSetor(null); }
-                                    }}
-                                    items={buildProcessoMenu(p, {
-                                      onOpen: () => onOpenProcesso(p.id),
-                                      onEdit: () => setEditProcesso(p),
-                                      onArchive: () => archiveProcesso(p),
-                                      onDelete: () => setDeleteProcesso(p),
-                                    })}
-                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => setDrawer({ type: 'processo', item: p, frenteNome: frente.nome })}
+                                    className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-tertiary transition-colors hover:bg-elevated hover:text-primary"
+                                    aria-label="Ações do processo"
+                                  >
+                                    <MoreVertical className="h-3.5 w-3.5" />
+                                  </button>
                                 </div>
                               ))}
                             </div>
@@ -619,36 +606,109 @@ export default function FrentesView({
           </div>
         </div>
       </Modal>
+
+      {/* Drawer de ações (Frente / Setor / Processo) */}
+      <ActionDrawer
+        open={drawer !== null}
+        onClose={closeDrawer}
+        title={getDrawerTitle(drawer)}
+        subtitle={getDrawerSubtitle(drawer)}
+        icon={getDrawerIcon(drawer)}
+        iconColor={getDrawerIconColor(drawer)}
+        items={getDrawerItems(
+          drawer,
+          {
+            onEditFrente: (f) => setEditFrente(f),
+            onNewSetor: (frenteId) => setShowNewSetor(frenteId),
+            onArchiveFrente: (f) => archiveFrente(f),
+            onDeleteFrente: (f) => setDeleteFrente(f),
+            onEditSetor: (s) => setEditSetor(s),
+            onNewProcesso: (frenteId) => setShowNewProcesso(frenteId),
+            onArchiveSetor: (s) => archiveSetor(s),
+            onDeleteSetor: (s) => setDeleteSetor(s),
+            onOpenProcesso: (id) => onOpenProcesso(id),
+            onEditProcesso: (p) => setEditProcesso(p),
+            onArchiveProcesso: (p) => archiveProcesso(p),
+            onDeleteProcesso: (p) => setDeleteProcesso(p),
+          },
+        )}
+      />
     </div>
   );
 }
 
-// =================== Menu builders ===================
+// =================== Drawer helpers ===================
 
-function buildFrenteMenu(frente: Frente, cbs: { onEdit: () => void; onNewSetor: () => void; onArchive: () => void; onDelete: () => void }): ThreeDotMenuItem[] {
-  return [
-    { label: 'Editar Empresa', icon: Edit3, onClick: cbs.onEdit },
-    { label: 'Novo Setor', icon: Folder, onClick: cbs.onNewSetor, divider: true },
-    { label: frente.arquivado ? 'Desarquivar' : 'Arquivar', icon: frente.arquivado ? ArchiveRestore : Archive, onClick: cbs.onArchive },
-    { label: 'Excluir', icon: Trash2, onClick: cbs.onDelete, danger: true },
-  ];
+type DrawerCallbacks = {
+  onEditFrente: (f: Frente) => void;
+  onNewSetor: (frenteId: string) => void;
+  onArchiveFrente: (f: Frente) => void;
+  onDeleteFrente: (f: Frente) => void;
+  onEditSetor: (s: Area) => void;
+  onNewProcesso: (frenteId: string) => void;
+  onArchiveSetor: (s: Area) => void;
+  onDeleteSetor: (s: Area) => void;
+  onOpenProcesso: (id: string) => void;
+  onEditProcesso: (p: Processo) => void;
+  onArchiveProcesso: (p: Processo) => void;
+  onDeleteProcesso: (p: Processo) => void;
+};
+
+function getDrawerTitle(d: DrawerTarget | null): string {
+  if (!d) return '';
+  if (d.type === 'frente') return d.item.nome;
+  if (d.type === 'setor') return d.item.nome;
+  return d.item.nome;
 }
 
-function buildSetorMenu(setor: Area, cbs: { onEdit: () => void; onNewProcesso: () => void; onArchive: () => void; onDelete: () => void }): ThreeDotMenuItem[] {
-  return [
-    { label: 'Editar Setor', icon: Edit3, onClick: cbs.onEdit },
-    { label: 'Novo Processo', icon: FileText, onClick: cbs.onNewProcesso, divider: true },
-    { label: setor.arquivado ? 'Desarquivar' : 'Arquivar', icon: setor.arquivado ? ArchiveRestore : Archive, onClick: cbs.onArchive },
-    { label: 'Excluir', icon: Trash2, onClick: cbs.onDelete, danger: true },
-  ];
+function getDrawerSubtitle(d: DrawerTarget | null): string | undefined {
+  if (!d) return undefined;
+  if (d.type === 'frente') return d.item.arquivado ? 'Empresa · Arquivada' : 'Empresa';
+  if (d.type === 'setor') return `Setor · ${d.frenteNome}${d.item.arquivado ? ' · Arquivado' : ''}`;
+  return `Processo · ${d.frenteNome}${d.item.arquivado ? ' · Arquivado' : ''}`;
 }
 
-function buildProcessoMenu(p: Processo, cbs: { onOpen: () => void; onEdit: () => void; onArchive: () => void; onDelete: () => void }): ThreeDotMenuItem[] {
+function getDrawerIcon(d: DrawerTarget | null) {
+  if (!d) return undefined;
+  if (d.type === 'frente') return Building2;
+  if (d.type === 'setor') return Folder;
+  return FileText;
+}
+
+function getDrawerIconColor(d: DrawerTarget | null): string | undefined {
+  if (!d) return undefined;
+  if (d.type === 'frente') return d.item.cor || '#9100E2';
+  if (d.type === 'setor') return '#f59e0b';
+  return undefined;
+}
+
+function getDrawerItems(d: DrawerTarget | null, cb: DrawerCallbacks): ActionItem[] {
+  if (!d) return [];
+  if (d.type === 'frente') {
+    const f = d.item;
+    return [
+      { id: 'edit', label: 'Editar empresa', icon: Edit3, onClick: () => cb.onEditFrente(f) },
+      { id: 'new-setor', label: 'Novo setor', icon: Folder, onClick: () => cb.onNewSetor(f.id), divider: true },
+      { id: 'archive', label: f.arquivado ? 'Desarquivar empresa' : 'Arquivar empresa', icon: f.arquivado ? ArchiveRestore : Archive, onClick: () => cb.onArchiveFrente(f) },
+      { id: 'delete', label: 'Excluir empresa', icon: Trash2, onClick: () => cb.onDeleteFrente(f), danger: true, divider: true },
+    ];
+  }
+  if (d.type === 'setor') {
+    const s = d.item;
+    return [
+      { id: 'edit', label: 'Editar setor', icon: Edit3, onClick: () => cb.onEditSetor(s) },
+      { id: 'new-processo', label: 'Novo processo neste setor', icon: FileText, onClick: () => cb.onNewProcesso(s.frente_id!), divider: true },
+      { id: 'archive', label: s.arquivado ? 'Desarquivar setor' : 'Arquivar setor', icon: s.arquivado ? ArchiveRestore : Archive, onClick: () => cb.onArchiveSetor(s) },
+      { id: 'delete', label: 'Excluir setor', icon: Trash2, onClick: () => cb.onDeleteSetor(s), danger: true, divider: true },
+    ];
+  }
+  // processo
+  const p = d.item;
   return [
-    { label: 'Abrir Processo', icon: ChevronRight, onClick: cbs.onOpen },
-    { label: 'Editar Processo', icon: Edit3, onClick: cbs.onEdit, divider: true },
-    { label: p.arquivado ? 'Desarquivar' : 'Arquivar', icon: p.arquivado ? ArchiveRestore : Archive, onClick: cbs.onArchive },
-    { label: 'Excluir', icon: Trash2, onClick: cbs.onDelete, danger: true, divider: true },
+    { id: 'open', label: 'Abrir processo', icon: FileEdit, onClick: () => cb.onOpenProcesso(p.id) },
+    { id: 'edit', label: 'Editar processo', icon: Edit3, onClick: () => cb.onEditProcesso(p), divider: true },
+    { id: 'archive', label: p.arquivado ? 'Desarquivar processo' : 'Arquivar processo', icon: p.arquivado ? ArchiveRestore : Archive, onClick: () => cb.onArchiveProcesso(p) },
+    { id: 'delete', label: 'Excluir processo', icon: Trash2, onClick: () => cb.onDeleteProcesso(p), danger: true, divider: true },
   ];
 }
 
