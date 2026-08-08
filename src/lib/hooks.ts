@@ -2,7 +2,8 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from './supabase';
 import type {
   Frente, Processo, Automacao, Stakeholder, Cliente, Area,
-  TimelineEvent, Pendencia, ChecklistItem, Comentario, Anexo, Tag, ProcessoTag, ProcessoStakeholder
+  TimelineEvent, Pendencia, ChecklistItem, Comentario, Anexo, Tag, ProcessoTag, ProcessoStakeholder,
+  Profile, FrenteShare, AreaShare, ProcessoShare,
 } from './types';
 
 // Generic fetch hook with safe state updates and error handling
@@ -314,4 +315,113 @@ export function useAreas() {
 export function useTags() {
   const { data, loading, refetch } = useSupabaseQuery<Tag>('tags', '* order by nome', []);
   return { tags: data, loading, refetch };
+}
+
+// ============== Auth helpers ==============
+
+export function useUser() {
+  const [user, setUser] = useState<{ id: string; email: string | null } | null>(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let mounted = true;
+    supabase.auth.getUser().then(({ data: { user: u } }) => {
+      if (mounted) { setUser(u ? { id: u.id, email: u.email ?? null } : null); setLoading(false); }
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      const u = session?.user ?? null;
+      setUser(u ? { id: u.id, email: u.email ?? null } : null);
+    });
+    return () => { mounted = false; subscription.unsubscribe(); };
+  }, []);
+  return { user, loading };
+}
+
+// ============== Profiles (compartilhamento) ==============
+
+export function useProfiles() {
+  const { data, loading, refetch } = useSupabaseQuery<Profile>('profiles', '* order by email', []);
+  return { profiles: data, loading, refetch };
+}
+
+// ============== Shares (compartilhamento por entidade) ==============
+
+export function useFrenteShares(frenteId: string | null) {
+  const [shares, setShares] = useState<FrenteShare[]>([]);
+  const [loading, setLoading] = useState(false);
+  const mountedRef = useRef(true);
+  const fetch = useCallback(async () => {
+    if (!frenteId) { setShares([]); return; }
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('frente_shares')
+        .select('*, profile:profiles(*)')
+        .eq('frente_id', frenteId)
+        .order('created_at', { ascending: true });
+      if (error) console.error('[useFrenteShares]', error.message);
+      if (mountedRef.current) setShares((data as FrenteShare[]) || []);
+    } finally {
+      if (mountedRef.current) setLoading(false);
+    }
+  }, [frenteId]);
+  useEffect(() => {
+    mountedRef.current = true;
+    fetch();
+    return () => { mountedRef.current = false; };
+  }, [fetch]);
+  return { shares, loading, refetch: fetch };
+}
+
+export function useAreaShares(areaId: string | null) {
+  const [shares, setShares] = useState<AreaShare[]>([]);
+  const [loading, setLoading] = useState(false);
+  const mountedRef = useRef(true);
+  const fetch = useCallback(async () => {
+    if (!areaId) { setShares([]); return; }
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('area_shares')
+        .select('*, profile:profiles(*)')
+        .eq('area_id', areaId)
+        .order('created_at', { ascending: true });
+      if (error) console.error('[useAreaShares]', error.message);
+      if (mountedRef.current) setShares((data as AreaShare[]) || []);
+    } finally {
+      if (mountedRef.current) setLoading(false);
+    }
+  }, [areaId]);
+  useEffect(() => {
+    mountedRef.current = true;
+    fetch();
+    return () => { mountedRef.current = false; };
+  }, [fetch]);
+  return { shares, loading, refetch: fetch };
+}
+
+export function useProcessoShares(processoId: string | null) {
+  const [shares, setShares] = useState<ProcessoShare[]>([]);
+  const [loading, setLoading] = useState(false);
+  const mountedRef = useRef(true);
+  const fetch = useCallback(async () => {
+    if (!processoId) { setShares([]); return; }
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('processo_shares')
+        .select('*, profile:profiles(*)')
+        .eq('processo_id', processoId)
+        .order('created_at', { ascending: true });
+      if (error) console.error('[useProcessoShares]', error.message);
+      if (mountedRef.current) setShares((data as ProcessoShare[]) || []);
+    } finally {
+      if (mountedRef.current) setLoading(false);
+    }
+  }, [processoId]);
+  useEffect(() => {
+    mountedRef.current = true;
+    fetch();
+    return () => { mountedRef.current = false; };
+  }, [fetch]);
+  return { shares, loading, refetch: fetch };
 }

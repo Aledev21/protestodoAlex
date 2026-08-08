@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { LucideIcon, X } from 'lucide-react';
 
@@ -26,6 +26,8 @@ interface Props {
   items: ActionItem[];
   /** Largura do drawer. Default: 22rem (w-88). */
   width?: string;
+  /** Conteúdo extra exibido abaixo da lista de ações (ex: seção de compartilhamento). */
+  footer?: ReactNode;
 }
 
 /**
@@ -39,7 +41,7 @@ interface Props {
  *  - Acessível: ESC fecha, foco inicial no título, trap de foco básico.
  */
 export default function ActionDrawer({
-  open, onClose, title, subtitle, icon: Icon, iconColor, items, width = '22rem',
+  open, onClose, title, subtitle, icon: Icon, iconColor, items, width = '22rem', footer,
 }: Props) {
   // ESC fecha + bloqueia scroll do body enquanto aberto.
   useEffect(() => {
@@ -108,7 +110,7 @@ export default function ActionDrawer({
         </div>
 
         {/* Lista de ações */}
-        <div className="flex-1 overflow-y-auto p-3">
+        <div className={`overflow-y-auto p-3 ${footer ? 'flex-shrink-0' : 'flex-1'}`}>
           {items.map((it, i) => {
             const isFirst = i === 0 || items[i - 1]?.divider;
             const isLast = i === items.length - 1;
@@ -139,6 +141,13 @@ export default function ActionDrawer({
             );
           })}
         </div>
+
+        {/* Footer opcional (seção de compartilhamento, etc) */}
+        {footer && (
+          <div className="border-t border-subtle p-3">
+            {footer}
+          </div>
+        )}
       </div>
     </div>,
     document.body,
