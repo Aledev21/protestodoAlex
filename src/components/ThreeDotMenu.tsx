@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { LucideIcon, MoreVertical } from 'lucide-react';
 
 export interface ThreeDotMenuItem {
@@ -29,12 +30,17 @@ interface Props {
 }
 
 /**
- * Menu 3-pontinhos que ESCAPA do overflow dos containers pai.
+ * Menu 3-pontinhos que SEMPRE escapa de qualquer container.
  *
- * Estratégia: usa `position: fixed` + coordenadas calculadas via getBoundingClientRect
- * no momento da abertura. Isso garante que o menu apareça POR CIMA de qualquer
- * ancestor com `overflow: hidden` / `overflow-auto` ou `transform` (que cria um
- * novo containing block e quebra `position: absolute` com z-index).
+ * Estratégia em 2 camadas:
+ *  1. O popover é renderizado via `createPortal` direto no `document.body`.
+ *     Isso garante que ele não é filho de NENHUM ancestor — então nada de
+ *     `overflow:hidden`, `transform`, `filter`, `contain` ou `will-change`
+ *     em um card-pai pode clipar ou criar um containing block que prenda
+ *     o menu.
+ *  2. Usa `position: fixed` (referente à viewport, já que está no body)
+ *     com coordenadas calculadas via `getBoundingClientRect` no momento
+ *     da abertura. Re-calcula em resize e scroll.
  *
  * Bônus: ajusta horizontalmente se passar da largura da viewport.
  */
@@ -104,7 +110,6 @@ export default function ThreeDotMenu({
   }, [open, onOpenChange]);
 
   // Fecha o menu automaticamente se a página for scrollada manualmente.
-  // (colocado no listener acima; isto é fallback pra wheel sem target scrollable)
   useEffect(() => {
     if (!open) return;
     const onWheel = () => onOpenChange(false);
@@ -115,24 +120,9 @@ export default function ThreeDotMenu({
   const sizeClass = buttonSize === 'sm' ? 'h-7 w-7' : 'h-8 w-8';
   const iconClass = buttonSize === 'sm' ? 'h-3.5 w-3.5' : 'h-4 w-4';
 
-  return (
-    <>
-      <button
-        ref={btnRef}
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onOpenChange(!open);
-        }}
-        className={`flex ${sizeClass} flex-shrink-0 items-center justify-center rounded-lg text-tertiary transition-colors hover:bg-elevated hover:text-primary ${buttonClassName}`}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        id={id}
-      >
-        <MoreVertical className={iconClass} />
-      </button>
-
-      {open && pos && (
+  // Popover via portal: vive no body, fora de QUALQUER ancestor.
+  const popover = open && pos && typeof document !== 'undefined'
+    ? createPortal(
         <div
           ref={menuRef}
           role="menu"
@@ -141,7 +131,7 @@ export default function ThreeDotMenu({
             top: pos.top,
             left: pos.left,
             width: menuWidth,
-            // Z altíssimo: fica acima de sidebar, modal, etc.
+            // Z altíssimo: acima de sidebar, modal, etc.
             zIndex: 9999,
           }}
           className="rounded-xl border border-default bg-surface shadow-2xl animate-scale-in"
@@ -173,8 +163,28 @@ export default function ThreeDotMenu({
               </div>
             );
           })}
-        </div>
-      )}
+        </div>,
+        document.body,
+      )
+    : null;
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onOpenChange(!open);
+        }}
+        className={`flex ${sizeClass} flex-shrink-0 items-center justify-center rounded-lg text-tertiary transition-colors hover:bg-elevated hover:text-primary ${buttonClassName}`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        id={id}
+      >
+        <MoreVertical className={iconClass} />
+      </button>
+      {popover}
     </>
   );
 }
