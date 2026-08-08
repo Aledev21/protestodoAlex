@@ -2,8 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import {
   ArrowLeft, Plus, Trash2, Check, MessageSquare, Paperclip,
   AlertCircle, Clock, HelpCircle, Link2, OctagonAlert, Users,
-  Layers, FileText, Target, GitBranch, Calendar, ChevronRight, X,
-  Archive, ArchiveRestore, MoreVertical, AlertOctagon, Edit3, Save, FolderOpen,
+  FileText, Target, GitBranch, Calendar, ChevronRight, X,
+  AlertOctagon, Edit3, Save, FolderOpen,
 } from 'lucide-react';
 import { useProcesso, useTimeline, usePendencias, useChecklist, useComentarios, useAnexos, useStakeholders } from '../lib/hooks';
 import { supabase } from '../lib/supabase';
@@ -14,7 +14,7 @@ import {
   PAPEIS_STAKEHOLDER, PAPEIS_DESTAQUE,
   getEtapaLabel, getStatusLabel, getPrioridadeLabel, getEtapaIndex,
 } from '../lib/constants';
-import { Pendencia, Automacao, Stakeholder } from '../lib/types';
+import { Pendencia, Stakeholder } from '../lib/types';
 
 const PENDENCIA_ICONS: Record<string, any> = {
   pendencia: AlertCircle, bloqueio: OctagonAlert, dependencia: Link2, duvida: HelpCircle, aguardando: Clock,
@@ -23,11 +23,9 @@ const PENDENCIA_ICONS: Record<string, any> = {
 export default function ProcessoView({
   processoId,
   onBack,
-  onOpenAutomacao,
 }: {
   processoId: string;
   onBack: () => void;
-  onOpenAutomacao: (id: string) => void;
 }) {
   const { processo, loading, setProcesso } = useProcesso(processoId);
   const { events: timeline, setEvents } = useTimeline(processoId);
@@ -37,27 +35,12 @@ export default function ProcessoView({
   const { anexos } = useAnexos(processoId);
   const { stakeholders } = useStakeholders();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'pendencias' | 'automacoes' | 'comments'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'pendencias' | 'comments'>('overview');
   const [showAddPendencia, setShowAddPendencia] = useState(false);
-  const [showAddAutomacao, setShowAddAutomacao] = useState(false);
   const [showAddChecklist, setShowAddChecklist] = useState(false);
   const [newChecklistText, setNewChecklistText] = useState('');
   const [newComment, setNewComment] = useState('');
-  const [showArchived, setShowArchived] = useState(false);
-  const [menuOpenAuto, setMenuOpenAuto] = useState<string | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Automacao | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
   const { notify } = useToast();
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpenAuto(null);
-      }
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
 
   if (loading) return <div className="flex h-full items-center justify-center text-tertiary">Carregando...</div>;
   if (!processo) return <div className="flex h-full items-center justify-center text-tertiary">Processo não encontrado</div>;
@@ -185,46 +168,10 @@ export default function ProcessoView({
     setPendencias(pendencias.filter((p) => p.id !== id));
   }
 
-  async function archiveAutomacao(auto: Automacao) {
-    const newVal = !auto.arquivado;
-    const { error } = await supabase.from('automacoes').update({ arquivado: newVal }).eq('id', auto.id);
-    if (error) { console.error('[archiveAutomacao]', error.message); notify('error', 'Erro ao arquivar automação'); return; }
-    setProcesso({
-      ...processo!,
-      automacoes: processo!.automacoes?.map((a) => a.id === auto.id ? { ...a, arquivado: newVal } : a),
-    });
-    await supabase.from('timeline_events').insert({
-      processo_id: processo!.id,
-      titulo: newVal ? `Automação arquivada: ${auto.nome}` : `Automação desarquivada: ${auto.nome}`,
-      tipo: 'evento',
-      descricao: newVal ? `A automação "${auto.nome}" foi arquivada.` : `A automação "${auto.nome}" foi desarquivada.`,
-    });
-    notify('success', newVal ? 'Automação arquivada' : 'Automação desarquivada');
-    setMenuOpenAuto(null);
-  }
-
-  async function deleteAutomacao(auto: Automacao) {
-    const { error } = await supabase.from('automacoes').delete().eq('id', auto.id);
-    if (error) { console.error('[deleteAutomacao]', error.message); notify('error', 'Erro ao excluir automação'); return; }
-    setProcesso({
-      ...processo!,
-      automacoes: processo!.automacoes?.filter((a) => a.id !== auto.id),
-    });
-    await supabase.from('timeline_events').insert({
-      processo_id: processo!.id,
-      titulo: `Automação excluída: ${auto.nome}`,
-      tipo: 'evento',
-      descricao: `A automação "${auto.nome}" foi excluída permanentemente.`,
-    });
-    notify('success', 'Automação excluída');
-    setDeleteTarget(null);
-  }
-
   const tabs = [
     { id: 'overview' as const, label: 'Visão Geral', icon: FileText },
     { id: 'timeline' as const, label: 'Timeline', icon: GitBranch, count: timeline.length },
     { id: 'pendencias' as const, label: 'Pendências', icon: AlertCircle, count: activePendencias.length },
-    { id: 'automacoes' as const, label: 'Automações', icon: Layers, count: processo.automacoes?.length || 0 },
     { id: 'comments' as const, label: 'Comentários', icon: MessageSquare, count: comentarios.length },
   ];
 
@@ -334,6 +281,7 @@ export default function ProcessoView({
                     <div className="flex items-center gap-2">
                       <FolderOpen className="h-4 w-4 flex-shrink-0 text-tertiary" />
                       <EditableField
+                        label="Caminho do Anexo"
                         value={processo.caminho_anexo}
                         onSave={(v) => updateProcesso('caminho_anexo', v)}
                         placeholder="C:\\Users\\...\\documento.pdf"
@@ -354,6 +302,28 @@ export default function ProcessoView({
                     <div />
                     <EditableField label="Volumetria" value={processo.volumetria} onSave={(v) => updateProcesso('volumetria', v)} placeholder="Ex: 500 docs/mês" />
                     <EditableField label="Saving" value={processo.saving} onSave={(v) => updateProcesso('saving', v)} placeholder="Ex: 40h/mês" />
+                  </div>
+
+                  {/* Equipe principal: BA / Arquiteto / GP */}
+                  <div className="border-t border-subtle pt-4">
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-tertiary">Equipe principal</p>
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                      {(['ba', 'arquiteto', 'gp'] as const).map((papel) => {
+                        const ps = processo.processo_stakeholders?.find((s) => s.papel === papel);
+                        return (
+                          <div key={papel}>
+                            <p className="mb-1.5 text-xs font-medium text-tertiary">
+                              {papel === 'ba' ? 'BA (Business Analyst)' : papel === 'arquiteto' ? 'Arquiteto' : 'GP'}
+                            </p>
+                            <Select
+                              value={ps?.stakeholder_id || ''}
+                              onChange={(v) => upsertProcessoStakeholder(papel, v || null)}
+                              options={[{ value: '', label: 'Não definido' }, ...stakeholders.map((s) => ({ value: s.id, label: s.nome }))]}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-3 border-t border-subtle pt-4">
@@ -487,7 +457,6 @@ export default function ProcessoView({
               <Card className="p-5">
                 <h3 className="mb-4 text-sm font-semibold text-primary">Resumo</h3>
                 <div className="space-y-3">
-                  <StatRow label="Automações" value={processo.automacoes?.length || 0} icon={Layers} />
                   <StatRow label="Pendências ativas" value={activePendencias.length} icon={AlertCircle} color={activePendencias.length > 0 ? 'text-amber-400' : 'text-tertiary'} />
                   <StatRow label="Comentários" value={comentarios.length} icon={MessageSquare} />
                   <StatRow label="Anexos" value={anexos.length} icon={Paperclip} />
@@ -597,91 +566,6 @@ export default function ProcessoView({
           </div>
         )}
 
-        {activeTab === 'automacoes' && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <p className="text-sm text-secondary">{processo.automacoes?.filter((a) => !a.arquivado).length || 0} automação(ões) ativa(s)</p>
-                {processo.automacoes?.some((a) => a.arquivado) && (
-                  <button
-                    onClick={() => setShowArchived(!showArchived)}
-                    className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs transition-colors ${
-                      showArchived ? 'bg-brand-primary/10 text-brand-light' : 'text-tertiary hover:text-secondary'
-                    }`}
-                  >
-                    <Archive className="h-3.5 w-3.5" />
-                    {showArchived ? 'Ocultar arquivadas' : 'Mostrar arquivadas'}
-                    <span className="rounded-full bg-elevated px-1.5 py-0.5 text-[10px]">{processo.automacoes.filter((a) => a.arquivado).length}</span>
-                  </button>
-                )}
-              </div>
-              <Button size="sm" icon={Plus} onClick={() => setShowAddAutomacao(true)}>Nova Automação</Button>
-            </div>
-            {processo.automacoes?.filter((a) => showArchived || !a.arquivado).map((auto) => (
-              <div
-                key={auto.id}
-                className={`group flex items-center gap-4 rounded-xl border border-subtle bg-surface p-4 transition-colors hover:border-default hover:bg-hover-state ${auto.arquivado ? 'opacity-60' : ''}`}
-              >
-                <button
-                  onClick={() => onOpenAutomacao(auto.id)}
-                  className="flex min-w-0 flex-1 items-center gap-4 text-left"
-                >
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-brand-primary/10">
-                    <Layers className="h-5 w-5 text-brand-light" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="truncate text-sm font-medium text-primary">{auto.nome}</p>
-                      {auto.arquivado && <Badge color="slate">Arquivada</Badge>}
-                    </div>
-                    <p className="text-xs text-tertiary">{auto.tipo} · {auto.sprint || 'Sem sprint'}</p>
-                  </div>
-                  <div className="w-32 flex-shrink-0">
-                    <div className="mb-1 flex items-center justify-between text-xs">
-                      <span className="text-tertiary">Progresso</span>
-                      <span className="text-secondary">{auto.progresso}%</span>
-                    </div>
-                    <ProgressBar value={auto.progresso} />
-                  </div>
-                  <Badge color={auto.status === 'concluido' ? 'green' : auto.status === 'bloqueado' ? 'red' : auto.status === 'em_andamento' ? 'blue' : 'slate'} className="flex-shrink-0">
-                    {getStatusLabel(auto.status, 'automacao')}
-                  </Badge>
-                  <ChevronRight className="h-4 w-4 text-tertiary opacity-0 transition-opacity group-hover:opacity-100 flex-shrink-0" />
-                </button>
-                <div className="relative flex-shrink-0" ref={menuOpenAuto === auto.id ? menuRef : undefined}>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setMenuOpenAuto(menuOpenAuto === auto.id ? null : auto.id); }}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-tertiary opacity-0 transition-opacity hover:bg-hover-state hover:text-primary group-hover:opacity-100"
-                  >
-                    <MoreVertical className="h-4 w-4" />
-                  </button>
-                  {menuOpenAuto === auto.id && (
-                    <div className="absolute right-0 top-full z-20 mt-1 w-44 rounded-xl border border-default bg-surface shadow-2xl animate-scale-in">
-                      <button
-                        onClick={() => archiveAutomacao(auto)}
-                        className="flex w-full items-center gap-2.5 rounded-t-lg px-3 py-2.5 text-sm text-secondary hover:bg-hover-state transition-colors"
-                      >
-                        {auto.arquivado ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
-                        {auto.arquivado ? 'Desarquivar' : 'Arquivar'}
-                      </button>
-                      <button
-                        onClick={() => { setDeleteTarget(auto); setMenuOpenAuto(null); }}
-                        className="flex w-full items-center gap-2.5 rounded-b-lg px-3 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Excluir
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-            {(!processo.automacoes || processo.automacoes.filter((a) => showArchived || !a.arquivado).length === 0) && (
-              <EmptyState icon={Layers} title="Nenhuma automação" description="Adicione automações a este processo" />
-            )}
-          </div>
-        )}
-
         {activeTab === 'comments' && (
           <div className="mx-auto max-w-2xl space-y-4">
             <div className="flex gap-3">
@@ -729,32 +613,6 @@ export default function ProcessoView({
         processoId={processo.id}
         onAdd={(p) => { setPendencias([p, ...pendencias]); }}
       />
-      <AddAutomacaoModal
-        open={showAddAutomacao}
-        onClose={() => setShowAddAutomacao(false)}
-        processoId={processo.id}
-        stakeholders={stakeholders}
-        onAdd={(a) => { setProcesso({ ...processo, automacoes: [...(processo.automacoes || []), a] }); }}
-      />
-      <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Excluir automação" width="sm">
-        <div className="space-y-4">
-          <div className="flex items-start gap-3 rounded-lg border border-red-500/30 bg-red-500/10 p-4">
-            <AlertOctagon className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-400" />
-            <div>
-              <p className="text-sm font-medium text-primary">Tem certeza?</p>
-              <p className="mt-1 text-xs text-secondary">
-                A automação "{deleteTarget?.nome}" será excluída permanentemente, junto com seu checklist, pendências e timeline. Esta ação não pode ser desfeita.
-              </p>
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => setDeleteTarget(null)}>Cancelar</Button>
-            <Button variant="danger" icon={Trash2} onClick={() => deleteTarget && deleteAutomacao(deleteTarget)}>
-              Excluir permanentemente
-            </Button>
-          </div>
-        </div>
-      </Modal>
     </div>
   );
 }
@@ -812,60 +670,6 @@ function AddPendenciaModal({ open, onClose, processoId, onAdd }: { open: boolean
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
           <Button onClick={handleSubmit}>Adicionar</Button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-function AddAutomacaoModal({ open, onClose, processoId, stakeholders, onAdd }: {
-  open: boolean;
-  onClose: () => void;
-  processoId: string;
-  stakeholders: Stakeholder[];
-  onAdd: (a: Automacao) => void;
-}) {
-  const [nome, setNome] = useState('');
-  const [tipo, setTipo] = useState('Performer');
-  const [responsavelId, setResponsavelId] = useState('');
-  const [sprint, setSprint] = useState('');
-
-  async function handleSubmit() {
-    if (!nome) return;
-    const { data, error } = await supabase.from('automacoes').insert({
-      processo_id: processoId, nome, tipo,
-      responsavel_id: responsavelId || null,
-      sprint: sprint || null,
-      status: 'nao_iniciado', progresso: 0,
-    }).select().single();
-    if (error) { console.error('[AddAutomacaoModal]', error.message); return; }
-    if (data) {
-      onAdd(data);
-      await supabase.from('timeline_events').insert({
-        processo_id: processoId,
-        titulo: `Automação criada: ${nome}`,
-        tipo: 'evento',
-        descricao: `Automação do tipo ${tipo} adicionada.`,
-      });
-    }
-    setNome(''); setTipo('Performer'); setSprint('');
-    onClose();
-  }
-
-  return (
-    <Modal open={open} onClose={onClose} title="Nova Automação">
-      <div className="space-y-4">
-        <Input label="Nome" value={nome} onChange={setNome} placeholder="Ex: Dispatcher" required />
-        <div className="grid grid-cols-2 gap-4">
-          <Select label="Tipo" value={tipo} onChange={setTipo}
-            options={['Dispatcher', 'Performer', 'API', 'IA', 'Outro'].map((t) => ({ value: t, label: t }))} />
-          <Input label="Sprint" value={sprint} onChange={setSprint} placeholder="Ex: Sprint 15" />
-        </div>
-        <Select label="Responsável" value={responsavelId} onChange={setResponsavelId}
-          options={[{ value: '', label: 'Selecione...' }, ...stakeholders.map((s) => ({ value: s.id, label: s.nome }))]} />
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button onClick={handleSubmit}>Criar</Button>
         </div>
       </div>
     </Modal>

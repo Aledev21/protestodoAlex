@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback, DragEvent } from 'react';
-import { ChevronRight, Layers, RefreshCw } from 'lucide-react';
+import { ChevronRight, RefreshCw } from 'lucide-react';
 import { Processo } from '../lib/types';
 import { Badge } from '../components/ui';
 import { useToast } from '../components/Toast';
@@ -162,12 +162,6 @@ export default function KanbanView({
                       >
                         <p className="text-sm font-medium text-primary line-clamp-2">{p.nome}</p>
                         <p className="mt-1 text-xs text-tertiary">{p.frente?.nome}</p>
-                        {p.automacoes && p.automacoes.length > 0 && (
-                          <div className="mt-2 flex items-center gap-1 text-[11px] text-tertiary">
-                            <Layers className="h-3 w-3" />
-                            {p.automacoes.length} automação(ões)
-                          </div>
-                        )}
                         <div className="mt-2.5 flex items-center gap-1.5 flex-wrap">
                           <Badge color={STATUS_PROCESSO.find((s) => s.value === p.status)?.color}>
                             {getStatusLabel(p.status)}

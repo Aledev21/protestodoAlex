@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, ChevronRight, Layers, Filter } from 'lucide-react';
+import { Search, ChevronRight, Filter } from 'lucide-react';
 import { Processo } from '../lib/types';
 import { Card, Badge, Select, EmptyState } from '../components/ui';
 import { getEtapaLabel, getStatusLabel, getPrioridadeLabel, STATUS_PROCESSO, PRIORIDADES } from '../lib/constants';
@@ -108,11 +108,7 @@ export default function ListaView({
                 {getStatusLabel(p.status)}
               </Badge>
               <span className="text-xs text-secondary truncate">{getEtapaLabel(p.etapa)}</span>
-              <span className="flex items-center gap-1 text-xs text-tertiary">
-                {p.automacoes && p.automacoes.length > 0 ? (
-                  <><Layers className="h-3 w-3" />{p.automacoes.length}</>
-                ) : '—'}
-              </span>
+              <span className="text-xs text-tertiary">{p.cliente?.nome || '—'}</span>
               <ChevronRight className="h-4 w-4 text-tertiary opacity-0 transition-opacity group-hover:opacity-100" />
             </button>
           ))}

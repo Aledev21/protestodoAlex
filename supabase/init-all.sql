@@ -74,9 +74,13 @@ CREATE POLICY "anon_delete_clientes" ON clientes FOR DELETE TO anon, authenticat
 -- =============================================================
 CREATE TABLE IF NOT EXISTS areas (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  nome text NOT NULL UNIQUE,
+  nome text NOT NULL,
+  frente_id uuid REFERENCES frentes(id) ON DELETE CASCADE,
+  arquivado boolean NOT NULL DEFAULT false,
   created_at timestamptz DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS idx_areas_frente ON areas(frente_id);
+CREATE INDEX IF NOT EXISTS idx_areas_arquivado ON areas(arquivado);
 ALTER TABLE areas ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "anon_crud_areas" ON areas;
 CREATE POLICY "anon_crud_areas" ON areas FOR SELECT TO anon, authenticated USING (true);

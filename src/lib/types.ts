@@ -17,6 +17,7 @@ export interface Area {
   id: string;
   nome: string;
   frente_id: string | null;
+  arquivado: boolean;
   created_at: string;
 }
 
