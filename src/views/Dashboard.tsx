@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import {
   TrendingUp, CircleDot, CheckCircle2, AlertOctagon, Clock, Users,
-  Layers, FileText, ArrowRight, CalendarClock, Activity, Bot,
+  Building2, FileText, ArrowRight, CalendarClock, Activity, Bot,
 } from 'lucide-react';
 import { Processo, Frente } from '../lib/types';
 import { Card, Badge } from '../components/ui';
@@ -20,8 +20,7 @@ export default function Dashboard({
 }) {
   const stats = useMemo(() => {
     const totalProcessos = processos.length;
-    const allAutomacoes = processos.flatMap((p) => p.automacoes || []);
-    const totalAutomacoes = allAutomacoes.length;
+    const totalEmpresas = frentes.filter((f) => !f.arquivado).length;
     const emAndamento = processos.filter((p) => p.status === 'em_andamento').length;
     const concluidos = processos.filter((p) => p.status === 'concluido').length;
     const bloqueados = processos.filter((p) => p.status === 'bloqueado').length;
@@ -32,7 +31,7 @@ export default function Dashboard({
       return ageDays > 30;
     }).length;
 
-    const automacoesPorProcesso = totalProcessos > 0 ? (totalAutomacoes / totalProcessos).toFixed(1) : '0';
+    const processosPorEmpresa = totalEmpresas > 0 ? (totalProcessos / totalEmpresas).toFixed(1) : '0';
 
     const porResponsavel: Record<string, number> = {};
     processos.forEach((p) => {
@@ -40,19 +39,18 @@ export default function Dashboard({
       porResponsavel[name] = (porResponsavel[name] || 0) + 1;
     });
 
-    const porFrente: Record<string, { count: number; automacoes: number }> = {};
+    const porFrente: Record<string, { count: number }> = {};
     processos.forEach((p) => {
       const name = p.frente?.nome || 'Sem frente';
-      if (!porFrente[name]) porFrente[name] = { count: 0, automacoes: 0 };
+      if (!porFrente[name]) porFrente[name] = { count: 0 };
       porFrente[name].count++;
-      porFrente[name].automacoes += p.automacoes?.length || 0;
     });
 
     return {
-      totalProcessos, totalAutomacoes, emAndamento, concluidos, bloqueados,
-      aguardandoCliente, atrasados, automacoesPorProcesso, porResponsavel, porFrente,
+      totalProcessos, totalEmpresas, emAndamento, concluidos, bloqueados,
+      aguardandoCliente, atrasados, processosPorEmpresa, porResponsavel, porFrente,
     };
-  }, [processos]);
+  }, [processos, frentes]);
 
   const recentProcessos = useMemo(() => {
     return [...processos]
@@ -69,13 +67,13 @@ export default function Dashboard({
 
   const kpis = [
     { label: 'Total de Processos', value: stats.totalProcessos, icon: FileText, color: 'text-brand-light', bg: 'bg-brand-primary/10' },
-    { label: 'Total de Automações', value: stats.totalAutomacoes, icon: Layers, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+    { label: 'Total de Empresas', value: stats.totalEmpresas, icon: Building2, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
     { label: 'Em Andamento', value: stats.emAndamento, icon: Activity, color: 'text-cyan-400', bg: 'bg-cyan-500/10' },
     { label: 'Concluídos', value: stats.concluidos, icon: CheckCircle2, color: 'text-green-400', bg: 'bg-green-500/10' },
     { label: 'Bloqueados', value: stats.bloqueados, icon: AlertOctagon, color: 'text-red-400', bg: 'bg-red-500/10' },
     { label: 'Aguardando Cliente', value: stats.aguardandoCliente, icon: Clock, color: 'text-amber-400', bg: 'bg-amber-500/10' },
     { label: 'Atrasados', value: stats.atrasados, icon: CalendarClock, color: 'text-orange-400', bg: 'bg-orange-500/10' },
-    { label: 'Automações/Processo', value: stats.automacoesPorProcesso, icon: TrendingUp, color: 'text-purple-400', bg: 'bg-purple-500/10' },
+    { label: 'Processos/Empresa', value: stats.processosPorEmpresa, icon: TrendingUp, color: 'text-purple-400', bg: 'bg-purple-500/10' },
   ];
 
   return (
@@ -160,7 +158,7 @@ export default function Dashboard({
                 <div key={frente}>
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-secondary">{frente}</span>
-                    <span className="text-tertiary">{data.count} processos · {data.automacoes} autom.</span>
+                    <span className="text-tertiary">{data.count} processo(s)</span>
                   </div>
                   <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-elevated">
                     <div

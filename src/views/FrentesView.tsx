@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import {
-  ChevronRight, Plus, FileText, Layers, ArrowLeft, FolderOpen, Filter, Check,
-  ChevronDown, MoreVertical, Archive, ArchiveRestore, Trash2, Edit3, AlertOctagon,
+  ChevronRight, Plus, FileText, ArrowLeft, FolderOpen, Filter, Check,
+  ChevronDown, Archive, ArchiveRestore, Trash2, Edit3, AlertOctagon,
   Building2, Folder, Search, X as XIcon,
 } from 'lucide-react';
 import { Processo, Frente, Area, Stakeholder, Cliente } from '../lib/types';
 import { Card, Badge, Button, Modal, Input, TextArea, Select } from '../components/ui';
+import ThreeDotMenu, { ThreeDotMenuItem } from '../components/ThreeDotMenu';
 import {
   getStatusLabel, getEtapaLabel, getPrioridadeLabel,
   STATUS_PROCESSO, PRIORIDADES, ETAPAS_PROCESSO,
@@ -37,10 +38,11 @@ export default function FrentesView({
   const [showNewProcesso, setShowNewProcesso] = useState<string | null>(null);
   const [showNewFrente, setShowNewFrente] = useState(false);
   const [showNewSetor, setShowNewSetor] = useState<string | null>(null);
-  const [etapaFilter, setEtapaFilter] = useState<string>('all');
+  // Filtro multi-select: Set de values. Vazio = sem filtro (mostra tudo).
+  const [etapaFilters, setEtapaFilters] = useState<Set<string>>(new Set());
   const [filterOpen, setFilterOpen] = useState(false);
 
-  // 3-dot menus
+  // 3-dot menus (controlados por id). Apenas 1 aberto por vez.
   const [menuOpenFrente, setMenuOpenFrente] = useState<string | null>(null);
   const [menuOpenSetor, setMenuOpenSetor] = useState<string | null>(null);
   const [menuOpenProcesso, setMenuOpenProcesso] = useState<string | null>(null);
@@ -60,7 +62,18 @@ export default function FrentesView({
   const [deleteProcesso, setDeleteProcesso] = useState<Processo | null>(null);
 
   const filterRef = useRef<HTMLDivElement>(null);
-  const menuRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // Helpers de toggle do filtro multi-select.
+  function toggleEtapaFilter(value: string) {
+    setEtapaFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(value)) next.delete(value); else next.add(value);
+      return next;
+    });
+  }
+  function clearEtapaFilters() {
+    setEtapaFilters(new Set());
+  }
 
   function toggleFrente(id: string) {
     setExpandedFrente((prev) => (prev === id ? null : id));
@@ -103,6 +116,19 @@ export default function FrentesView({
     setDeleteSetor(null);
     onRefresh();
   }
+  async function archiveSetor(setor: Area) {
+    const newVal = !setor.arquivado;
+    const { error } = await supabase.from('areas').update({ arquivado: newVal }).eq('id', setor.id);
+    if (error) {
+      console.error('[archiveSetor]', error.message);
+      notify('error', 'Erro ao arquivar setor');
+      return;
+    }
+    notify('success', newVal ? 'Setor arquivado' : 'Setor desarquivado');
+    setMenuOpenSetor(null);
+    refetchAreas();
+    onRefresh();
+  }
   async function deleteProcessoPermanently(p: Processo) {
     const { error } = await supabase.from('processos').delete().eq('id', p.id);
     if (error) {
@@ -133,29 +159,20 @@ export default function FrentesView({
       if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
         setFilterOpen(false);
       }
-      // close any menu whose ref does not contain the click target.
-      // separador "|" porque UUIDs contêm "-" (ex: "abc-123-def")
-      Object.entries(menuRefs.current).forEach(([key, ref]) => {
-        if (ref && !ref.contains(e.target as Node)) {
-          const sepIdx = key.indexOf('|');
-          if (sepIdx < 0) return;
-          const type = key.slice(0, sepIdx);
-          const raw = key.slice(sepIdx + 1);
-          if (type === 'f' && menuOpenFrente === raw) setMenuOpenFrente(null);
-          if (type === 's' && menuOpenSetor === raw) setMenuOpenSetor(null);
-          if (type === 'p' && menuOpenProcesso === raw) setMenuOpenProcesso(null);
-        }
-      });
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [menuOpenFrente, menuOpenSetor, menuOpenProcesso]);
+  }, []);
 
   const etapaFilterLabel =
-    etapaFilter === 'all'
-      ? 'Todas as etapas'
-      : ETAPAS_PROCESSO.find((e) => e.value === etapaFilter)?.label ?? 'Todas as etapas';
-  const totalFiltered = processos.filter((p) => etapaFilter === 'all' || p.etapa === etapaFilter).length;
+    etapaFilters.size === 0
+      ? 'Filtrar por etapa'
+      : etapaFilters.size === 1
+        ? ETAPAS_PROCESSO.find((e) => e.value === [...etapaFilters][0])?.label ?? 'Filtrar por etapa'
+        : `${etapaFilters.size} etapas`;
+  const totalFiltered = etapaFilters.size === 0
+    ? processos.length
+    : processos.filter((p) => etapaFilters.has(p.etapa)).length;
 
   const visibleFrentes = frentes.filter((f) => showArchived || !f.arquivado);
 
@@ -212,45 +229,58 @@ export default function FrentesView({
           <button
             onClick={() => setFilterOpen(!filterOpen)}
             className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
-              etapaFilter !== 'all'
+              etapaFilters.size > 0
                 ? 'border-brand-primary/50 bg-brand-primary/10 text-brand-light'
                 : 'border-default bg-elevated text-secondary hover:bg-hover-state'
             }`}
           >
             <Filter className="h-4 w-4" />
             <span>{etapaFilterLabel}</span>
+            {etapaFilters.size > 0 && (
+              <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-brand-primary px-1.5 text-[10px] font-bold text-white">
+                {etapaFilters.size}
+              </span>
+            )}
             <ChevronDown className={`h-3.5 w-3.5 transition-transform ${filterOpen ? 'rotate-180' : ''}`} />
           </button>
           {filterOpen && (
-            <div className="absolute right-0 top-full z-20 mt-1.5 w-64 rounded-xl border border-default bg-surface shadow-2xl animate-scale-in">
-              <div className="border-b border-subtle px-3 py-2">
+            <div className="absolute right-0 top-full z-20 mt-1.5 w-72 rounded-xl border border-default bg-surface shadow-2xl animate-scale-in">
+              <div className="flex items-center justify-between border-b border-subtle px-3 py-2">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary">Filtrar por etapa</p>
-              </div>
-              <div className="max-h-72 overflow-y-auto p-1.5">
-                <button
-                  onClick={() => { setEtapaFilter('all'); setFilterOpen(false); }}
-                  className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-sm transition-colors ${
-                    etapaFilter === 'all' ? 'bg-brand-primary/10 text-brand-light' : 'text-secondary hover:bg-hover-state'
-                  }`}
-                >
-                  Todas as etapas
-                  {etapaFilter === 'all' && <Check className="h-4 w-4" />}
-                </button>
-                {ETAPAS_PROCESSO.map((etapa) => (
+                {etapaFilters.size > 0 && (
                   <button
-                    key={etapa.value}
-                    onClick={() => { setEtapaFilter(etapa.value); setFilterOpen(false); }}
-                    className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-sm transition-colors ${
-                      etapaFilter === etapa.value ? 'bg-brand-primary/10 text-brand-light' : 'text-secondary hover:bg-hover-state'
-                    }`}
+                    onClick={clearEtapaFilters}
+                    className="text-[10px] font-medium text-brand-light hover:text-brand-lavender transition-colors"
                   >
-                    <span className="flex items-center gap-2 min-w-0">
-                      <span className="text-[10px] text-tertiary flex-shrink-0">{etapa.group}</span>
-                      <span className="truncate">{etapa.label}</span>
-                    </span>
-                    {etapaFilter === etapa.value && <Check className="h-4 w-4 flex-shrink-0" />}
+                    Limpar
                   </button>
-                ))}
+                )}
+              </div>
+              <div className="max-h-80 overflow-y-auto p-1.5">
+                {ETAPAS_PROCESSO.map((etapa) => {
+                  const checked = etapaFilters.has(etapa.value);
+                  return (
+                    <button
+                      key={etapa.value}
+                      onClick={() => toggleEtapaFilter(etapa.value)}
+                      className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors ${
+                        checked ? 'bg-brand-primary/10 text-brand-light' : 'text-secondary hover:bg-hover-state'
+                      }`}
+                    >
+                      <span
+                        className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border transition-colors ${
+                          checked ? 'border-brand-primary bg-brand-primary' : 'border-default bg-elevated'
+                        }`}
+                      >
+                        {checked && <Check className="h-3 w-3 text-white" />}
+                      </span>
+                      <span className="flex items-center gap-2 min-w-0 flex-1">
+                        <span className="text-[10px] text-tertiary flex-shrink-0">{etapa.group}</span>
+                        <span className="truncate">{etapa.label}</span>
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -264,20 +294,21 @@ export default function FrentesView({
         </p>
       )}
 
-      {etapaFilter !== 'all' && (
+      {etapaFilters.size > 0 && (
         <p className="mb-4 text-xs text-tertiary">
-          Mostrando {totalFiltered} processo(s) na etapa &quot;{etapaFilterLabel}&quot;
+          Mostrando {totalFiltered} processo(s) em {etapaFilters.size} {etapaFilters.size === 1 ? 'etapa' : 'etapas'} selecionada(s)
         </p>
       )}
 
       {/* ===== 3-level accordion ===== */}
       <div className="space-y-4">
         {searchedFrentes.map((frente) => {
-          const frenteSetores = areas.filter((a) => a.frente_id === frente.id);
-          const frenteProcessos = processos.filter(
-            (p) => p.frente_id === frente.id && (etapaFilter === 'all' || p.etapa === etapaFilter)
+          const allFrentesSetores = areas.filter((a) => a.frente_id === frente.id);
+          const frenteSetores = allFrentesSetores.filter((a) => showArchived || !a.arquivado);
+          const frenteProcessosAll = processos.filter((p) => p.frente_id === frente.id);
+          const frenteProcessos = frenteProcessosAll.filter(
+            (p) => etapaFilters.size === 0 || etapaFilters.has(p.etapa)
           );
-          const automacoesCount = frenteProcessos.reduce((acc, p) => acc + (p.automacoes?.length || 0), 0);
           const isExpanded = expandedFrente === frente.id;
 
           return (
@@ -300,50 +331,25 @@ export default function FrentesView({
                   <div className="flex items-center gap-4 text-xs text-tertiary flex-shrink-0">
                     <span>{frenteSetores.length} setores</span>
                     <span>{frenteProcessos.length} processos</span>
-                    <span>{automacoesCount} automações</span>
                   </div>
                 </button>
                 <Button size="sm" variant="secondary" icon={Plus} onClick={() => setShowNewProcesso(frente.id)}>
                   Novo Processo
                 </Button>
-                {/* 3-dot menu */}
-                <div className="relative flex-shrink-0" ref={(el) => { menuRefs.current[`f|${frente.id}`] = el; }}>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setMenuOpenFrente(menuOpenFrente === frente.id ? null : frente.id); }}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-tertiary hover:bg-elevated hover:text-primary transition-colors"
-                  >
-                    <MoreVertical className="h-4 w-4" />
-                  </button>
-                  {menuOpenFrente === frente.id && (
-                    <div className="absolute right-0 top-full z-30 mt-1 w-44 rounded-xl border border-default bg-surface shadow-2xl animate-scale-in">
-                      <button
-                        onClick={() => { setEditFrente(frente); setMenuOpenFrente(null); }}
-                        className="flex w-full items-center gap-2.5 rounded-t-lg px-3 py-2.5 text-sm text-secondary hover:bg-hover-state transition-colors"
-                      >
-                        <Edit3 className="h-4 w-4" /> Editar Empresa
-                      </button>
-                      <button
-                        onClick={() => { setShowNewSetor(frente.id); setMenuOpenFrente(null); }}
-                        className="flex w-full items-center gap-2.5 px-3 py-2.5 text-sm text-secondary hover:bg-hover-state transition-colors"
-                      >
-                        <Folder className="h-4 w-4" /> Novo Setor
-                      </button>
-                      <button
-                        onClick={() => archiveFrente(frente)}
-                        className="flex w-full items-center gap-2.5 px-3 py-2.5 text-sm text-secondary hover:bg-hover-state transition-colors"
-                      >
-                        {frente.arquivado ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
-                        {frente.arquivado ? 'Desarquivar' : 'Arquivar'}
-                      </button>
-                      <button
-                        onClick={() => { setDeleteFrente(frente); setMenuOpenFrente(null); }}
-                        className="flex w-full items-center gap-2.5 rounded-b-lg px-3 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
-                      >
-                        <Trash2 className="h-4 w-4" /> Excluir
-                      </button>
-                    </div>
-                  )}
-                </div>
+                {/* 3-dot menu — usa position:fixed para escapar overflow */}
+                <ThreeDotMenu
+                  open={menuOpenFrente === frente.id}
+                  onOpenChange={(o) => {
+                    setMenuOpenFrente(o ? frente.id : null);
+                    if (o) { setMenuOpenSetor(null); setMenuOpenProcesso(null); }
+                  }}
+                  items={buildFrenteMenu(frente, {
+                    onEdit: () => setEditFrente(frente),
+                    onNewSetor: () => setShowNewSetor(frente.id),
+                    onArchive: () => archiveFrente(frente),
+                    onDelete: () => setDeleteFrente(frente),
+                  })}
+                />
               </div>
 
               {/* --- Level 2: Setores --- */}
@@ -365,10 +371,9 @@ export default function FrentesView({
                     {frenteSetores.map((setor) => {
                       const setorProcessos = frenteProcessos.filter((p) => p.area_id === setor.id);
                       const setorExpanded = expandedSetor === setor.id;
-                      const setorAutoCount = setorProcessos.reduce((acc, p) => acc + (p.automacoes?.length || 0), 0);
 
                       return (
-                        <div key={setor.id} className="rounded-lg bg-surface/50">
+                        <div key={setor.id} className={`rounded-lg bg-surface/50 ${setor.arquivado ? 'opacity-60' : ''}`}>
                           {/* Setor header */}
                           <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-hover-state transition-colors">
                             <button
@@ -376,40 +381,24 @@ export default function FrentesView({
                               className="flex flex-1 items-center gap-2.5 text-left min-w-0"
                             >
                               <ChevronRight className={`h-3.5 w-3.5 text-tertiary transition-transform flex-shrink-0 ${setorExpanded ? 'rotate-90' : ''}`} />
-                              <Folder className="h-4 w-4 flex-shrink-0 text-amber-400" />
+                              <Folder className={`h-4 w-4 flex-shrink-0 ${setor.arquivado ? 'text-slate-500' : 'text-amber-400'}`} />
                               <p className="text-sm font-medium text-primary truncate">{setor.nome}</p>
+                              {setor.arquivado && <Badge color="slate">Arquivado</Badge>}
                               <span className="text-xs text-tertiary">{setorProcessos.length} processos</span>
                             </button>
-                            <div className="relative flex-shrink-0" ref={(el) => { menuRefs.current[`s|${setor.id}`] = el; }}>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); setMenuOpenSetor(menuOpenSetor === setor.id ? null : setor.id); }}
-                                className="flex h-7 w-7 items-center justify-center rounded-lg text-tertiary hover:bg-elevated hover:text-primary transition-colors"
-                              >
-                                <MoreVertical className="h-3.5 w-3.5" />
-                              </button>
-                              {menuOpenSetor === setor.id && (
-                                <div className="absolute right-0 top-full z-30 mt-1 w-44 rounded-xl border border-default bg-surface shadow-2xl animate-scale-in">
-                                  <button
-                                    onClick={() => { setEditSetor(setor); setMenuOpenSetor(null); }}
-                                    className="flex w-full items-center gap-2.5 rounded-t-lg px-3 py-2.5 text-sm text-secondary hover:bg-hover-state transition-colors"
-                                  >
-                                    <Edit3 className="h-4 w-4" /> Editar Setor
-                                  </button>
-                                  <button
-                                    onClick={() => { setShowNewProcesso(frente.id); setMenuOpenSetor(null); }}
-                                    className="flex w-full items-center gap-2.5 px-3 py-2.5 text-sm text-secondary hover:bg-hover-state transition-colors"
-                                  >
-                                    <FileText className="h-4 w-4" /> Novo Processo
-                                  </button>
-                                  <button
-                                    onClick={() => { setDeleteSetor(setor); setMenuOpenSetor(null); }}
-                                    className="flex w-full items-center gap-2.5 rounded-b-lg px-3 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
-                                  >
-                                    <Trash2 className="h-4 w-4" /> Excluir
-                                  </button>
-                                </div>
-                              )}
-                            </div>
+                            <ThreeDotMenu
+                              open={menuOpenSetor === setor.id}
+                              onOpenChange={(o) => {
+                                setMenuOpenSetor(o ? setor.id : null);
+                                if (o) { setMenuOpenFrente(null); setMenuOpenProcesso(null); }
+                              }}
+                              items={buildSetorMenu(setor, {
+                                onEdit: () => setEditSetor(setor),
+                                onNewProcesso: () => setShowNewProcesso(frente.id),
+                                onArchive: () => archiveSetor(setor),
+                                onDelete: () => setDeleteSetor(setor),
+                              })}
+                            />
                           </div>
 
                           {/* --- Level 3: Processos --- */}
@@ -418,74 +407,43 @@ export default function FrentesView({
                               {setorProcessos.length === 0 && (
                                 <p className="px-3 py-4 text-center text-xs text-tertiary">Nenhum processo neste setor</p>
                               )}
-                              {setorProcessos.map((p) => {
-                                const automacoes = p.automacoes || [];
-                                return (
-                                  <div key={p.id} className="group flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-hover-state transition-colors">
-                                    <button
-                                      onClick={() => onOpenProcesso(p.id)}
-                                      className="flex flex-1 items-center gap-2.5 text-left min-w-0"
-                                    >
-                                      <FileText className="h-4 w-4 flex-shrink-0 text-brand-light" />
-                                      <div className="min-w-0 flex-1">
-                                        <p className="truncate text-sm font-medium text-primary">{p.nome}</p>
-                                        <p className="text-xs text-tertiary">{getEtapaLabel(p.etapa)} · {p.cliente?.nome || 'Sem cliente'}</p>
-                                      </div>
-                                      <div className="flex items-center gap-2 flex-shrink-0">
-                                        <Badge color={PRIORIDADES.find((pr) => pr.value === p.prioridade)?.color}>
-                                          {getPrioridadeLabel(p.prioridade)}
-                                        </Badge>
-                                        <Badge color={STATUS_PROCESSO.find((s) => s.value === p.status)?.color}>
-                                          {getStatusLabel(p.status)}
-                                        </Badge>
-                                        {automacoes.length > 0 && (
-                                          <span className="flex items-center gap-1 rounded-md bg-elevated px-2 py-0.5 text-xs font-medium text-secondary">
-                                            <Layers className="h-3 w-3" />
-                                            {automacoes.length} {automacoes.length === 1 ? 'automação' : 'automações'}
-                                          </span>
-                                        )}
-                                      </div>
-                                    </button>
-                                    <div className="relative flex-shrink-0" ref={(el) => { menuRefs.current[`p|${p.id}`] = el; }}>
-                                      <button
-                                        onClick={(e) => { e.stopPropagation(); setMenuOpenProcesso(menuOpenProcesso === p.id ? null : p.id); }}
-                                        className="flex h-7 w-7 items-center justify-center rounded-lg text-tertiary hover:bg-elevated hover:text-primary transition-colors"
-                                      >
-                                        <MoreVertical className="h-3.5 w-3.5" />
-                                      </button>
-                                      {menuOpenProcesso === p.id && (
-                                        <div className="absolute right-0 top-full z-30 mt-1 w-44 rounded-xl border border-default bg-surface shadow-2xl animate-scale-in">
-                                          <button
-                                            onClick={() => { onOpenProcesso(p.id); setMenuOpenProcesso(null); }}
-                                            className="flex w-full items-center gap-2.5 rounded-t-lg px-3 py-2.5 text-sm text-secondary hover:bg-hover-state transition-colors"
-                                          >
-                                            <ArrowLeft className="h-4 w-4 rotate-180" /> Abrir Processo
-                                          </button>
-                                          <button
-                                            onClick={() => { setEditProcesso(p); setMenuOpenProcesso(null); }}
-                                            className="flex w-full items-center gap-2.5 px-3 py-2.5 text-sm text-secondary hover:bg-hover-state transition-colors"
-                                          >
-                                            <Edit3 className="h-4 w-4" /> Editar Processo
-                                          </button>
-                                          <button
-                                            onClick={() => archiveProcesso(p)}
-                                            className="flex w-full items-center gap-2.5 px-3 py-2.5 text-sm text-secondary hover:bg-hover-state transition-colors"
-                                          >
-                                            {p.arquivado ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
-                                            {p.arquivado ? 'Desarquivar' : 'Arquivar'}
-                                          </button>
-                                          <button
-                                            onClick={() => { setDeleteProcesso(p); setMenuOpenProcesso(null); }}
-                                            className="flex w-full items-center gap-2.5 rounded-b-lg px-3 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
-                                          >
-                                            <Trash2 className="h-4 w-4" /> Excluir
-                                          </button>
-                                        </div>
-                                      )}
+                              {setorProcessos.map((p) => (
+                                <div key={p.id} className={`group flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-hover-state transition-colors ${p.arquivado ? 'opacity-60' : ''}`}>
+                                  <button
+                                    onClick={() => onOpenProcesso(p.id)}
+                                    className="flex flex-1 items-center gap-2.5 text-left min-w-0"
+                                  >
+                                    <FileText className="h-4 w-4 flex-shrink-0 text-brand-light" />
+                                    <div className="min-w-0 flex-1">
+                                      <p className="truncate text-sm font-medium text-primary">{p.nome}</p>
+                                      <p className="text-xs text-tertiary">{p.cliente?.nome || 'Sem cliente'}</p>
                                     </div>
-                                  </div>
-                                );
-                              })}
+                                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                                      {/* Coluna Etapa (era o pedido: mostrar a coluna do Kanban aqui) */}
+                                      <Badge color="brand">{getEtapaLabel(p.etapa)}</Badge>
+                                      <Badge color={STATUS_PROCESSO.find((s) => s.value === p.status)?.color}>
+                                        {getStatusLabel(p.status)}
+                                      </Badge>
+                                      <Badge color={PRIORIDADES.find((pr) => pr.value === p.prioridade)?.color}>
+                                        {getPrioridadeLabel(p.prioridade)}
+                                      </Badge>
+                                    </div>
+                                  </button>
+                                  <ThreeDotMenu
+                                    open={menuOpenProcesso === p.id}
+                                    onOpenChange={(o) => {
+                                      setMenuOpenProcesso(o ? p.id : null);
+                                      if (o) { setMenuOpenFrente(null); setMenuOpenSetor(null); }
+                                    }}
+                                    items={buildProcessoMenu(p, {
+                                      onOpen: () => onOpenProcesso(p.id),
+                                      onEdit: () => setEditProcesso(p),
+                                      onArchive: () => archiveProcesso(p),
+                                      onDelete: () => setDeleteProcesso(p),
+                                    })}
+                                  />
+                                </div>
+                              ))}
                             </div>
                           )}
                         </div>
@@ -517,14 +475,14 @@ export default function FrentesView({
                                 <FileText className="h-4 w-4 flex-shrink-0 text-brand-light" />
                                 <div className="min-w-0 flex-1">
                                   <p className="truncate text-sm font-medium text-primary">{p.nome}</p>
-                                  <p className="text-xs text-tertiary">{getEtapaLabel(p.etapa)}</p>
+                                  <p className="text-xs text-tertiary">{p.cliente?.nome || 'Sem cliente'}</p>
                                 </div>
-                                {(p.automacoes?.length || 0) > 0 && (
-                                  <span className="flex items-center gap-1 rounded-md bg-elevated px-2 py-0.5 text-xs font-medium text-secondary flex-shrink-0">
-                                    <Layers className="h-3 w-3" />
-                                    {p.automacoes!.length}
-                                  </span>
-                                )}
+                                <div className="flex items-center gap-1.5 flex-shrink-0">
+                                  <Badge color="brand">{getEtapaLabel(p.etapa)}</Badge>
+                                  <Badge color={STATUS_PROCESSO.find((s) => s.value === p.status)?.color}>
+                                    {getStatusLabel(p.status)}
+                                  </Badge>
+                                </div>
                               </button>
                             ))}
                           </div>
@@ -553,8 +511,8 @@ export default function FrentesView({
         )}
       </div>
 
-      {/* Archived toggle */}
-      {frentes.some((f) => f.arquivado) && (
+      {/* Archived toggle — mostra se houver Frentes OU Setores arquivados */}
+      {(frentes.some((f) => f.arquivado) || areas.some((a) => a.arquivado)) && (
         <div className="mt-4 flex justify-center">
           <button
             onClick={() => setShowArchived(!showArchived)}
@@ -563,8 +521,10 @@ export default function FrentesView({
             }`}
           >
             <Archive className="h-3.5 w-3.5" />
-            {showArchived ? 'Ocultar arquivadas' : 'Mostrar arquivadas'}
-            <span className="rounded-full bg-elevated px-1.5 py-0.5 text-[10px]">{frentes.filter((f) => f.arquivado).length}</span>
+            {showArchived ? 'Ocultar arquivados' : 'Mostrar arquivados'}
+            <span className="rounded-full bg-elevated px-1.5 py-0.5 text-[10px]">
+              {frentes.filter((f) => f.arquivado).length + areas.filter((a) => a.arquivado).length}
+            </span>
           </button>
         </div>
       )}
@@ -661,6 +621,35 @@ export default function FrentesView({
       </Modal>
     </div>
   );
+}
+
+// =================== Menu builders ===================
+
+function buildFrenteMenu(frente: Frente, cbs: { onEdit: () => void; onNewSetor: () => void; onArchive: () => void; onDelete: () => void }): ThreeDotMenuItem[] {
+  return [
+    { label: 'Editar Empresa', icon: Edit3, onClick: cbs.onEdit },
+    { label: 'Novo Setor', icon: Folder, onClick: cbs.onNewSetor, divider: true },
+    { label: frente.arquivado ? 'Desarquivar' : 'Arquivar', icon: frente.arquivado ? ArchiveRestore : Archive, onClick: cbs.onArchive },
+    { label: 'Excluir', icon: Trash2, onClick: cbs.onDelete, danger: true },
+  ];
+}
+
+function buildSetorMenu(setor: Area, cbs: { onEdit: () => void; onNewProcesso: () => void; onArchive: () => void; onDelete: () => void }): ThreeDotMenuItem[] {
+  return [
+    { label: 'Editar Setor', icon: Edit3, onClick: cbs.onEdit },
+    { label: 'Novo Processo', icon: FileText, onClick: cbs.onNewProcesso, divider: true },
+    { label: setor.arquivado ? 'Desarquivar' : 'Arquivar', icon: setor.arquivado ? ArchiveRestore : Archive, onClick: cbs.onArchive },
+    { label: 'Excluir', icon: Trash2, onClick: cbs.onDelete, danger: true },
+  ];
+}
+
+function buildProcessoMenu(p: Processo, cbs: { onOpen: () => void; onEdit: () => void; onArchive: () => void; onDelete: () => void }): ThreeDotMenuItem[] {
+  return [
+    { label: 'Abrir Processo', icon: ChevronRight, onClick: cbs.onOpen },
+    { label: 'Editar Processo', icon: Edit3, onClick: cbs.onEdit, divider: true },
+    { label: p.arquivado ? 'Desarquivar' : 'Arquivar', icon: p.arquivado ? ArchiveRestore : Archive, onClick: cbs.onArchive },
+    { label: 'Excluir', icon: Trash2, onClick: cbs.onDelete, danger: true, divider: true },
+  ];
 }
 
 // =================== Modals ===================

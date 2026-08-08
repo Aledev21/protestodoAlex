@@ -1,20 +1,20 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import {
   LayoutDashboard, Layers, FolderKanban, List, Calendar, GitBranch,
-  Search, Plus, AlertTriangle, Bot, ChevronRight, LogOut,
+  Search, AlertTriangle, Bot, LogOut, Archive,
 } from 'lucide-react';
-import { useFrentes, useProcessos } from './lib/hooks';
+import { useFrentes, useProcessos, useAreas } from './lib/hooks';
 import { useAuth } from './lib/auth';
 
 import Dashboard from './views/Dashboard';
 import FrentesView from './views/FrentesView';
 import ProcessoView from './views/ProcessoView';
-import AutomacaoView from './views/AutomacaoView';
 import KanbanView from './views/KanbanView';
 import ListaView from './views/ListaView';
 import CalendarioView from './views/CalendarioView';
 import GlobalTimeline from './views/GlobalTimeline';
 import AIPanel from './views/AIPanel';
+import ArquivadosView from './views/ArquivadosView';
 import SearchModal from './components/SearchModal';
 import { ViewErrorBoundary } from './components/ErrorBoundary';
 import LoginPage from './views/LoginPage';
@@ -23,12 +23,12 @@ type View =
   | { name: 'dashboard' }
   | { name: 'frentes' }
   | { name: 'processo'; id: string }
-  | { name: 'automacao'; id: string }
   | { name: 'kanban' }
   | { name: 'lista' }
   | { name: 'calendario' }
   | { name: 'timeline' }
-  | { name: 'ai' };
+  | { name: 'ai' }
+  | { name: 'arquivados' };
 
 export default function App() {
   const { session, loading: authLoading, signOut, user } = useAuth();
@@ -53,10 +53,12 @@ function AuthenticatedApp({ user, signOut }: { user: any; signOut: () => void })
 
   const { frentes, loading: frentesLoading, refetch: refetchFrentes } = useFrentes();
   const { processos, loading: processosLoading, refetch: refetchProcessos } = useProcessos();
+  const { areas, refetch: refetchAreas } = useAreas();
 
   function refreshAll() {
     refetchFrentes();
     refetchProcessos();
+    refetchAreas();
   }
 
   // Keyboard shortcut for search
@@ -91,11 +93,16 @@ function AuthenticatedApp({ user, signOut }: { user: any; signOut: () => void })
     { id: 'timeline', label: 'Timeline', icon: GitBranch },
     { id: 'calendario', label: 'Calendário', icon: Calendar },
     { id: 'ai', label: 'Assistente IA', icon: Bot },
+    { id: 'arquivados', label: 'Arquivados', icon: Archive },
   ];
 
-  const activeNav = view.name === 'processo' || view.name === 'automacao' ? null : view.name;
-  const processoCount = processos.length;
+  const activeNav = view.name === 'processo' ? null : view.name;
+  const empresaCount = frentes.filter((f) => !f.arquivado).length;
   const blockedCount = processos.filter((p) => p.status === 'bloqueado').length;
+  const arquivadosCount =
+    frentes.filter((f) => f.arquivado).length +
+    (areas?.filter((a) => a.arquivado).length || 0) +
+    processos.filter((p) => p.arquivado).length;
 
   return (
     <div className="flex h-screen overflow-hidden bg-base">
@@ -142,8 +149,11 @@ function AuthenticatedApp({ user, signOut }: { user: any; signOut: () => void })
                 )}
                 <Icon className={`relative h-4 w-4 ${active ? 'text-white' : ''}`} />
                 <span className="relative">{item.label}</span>
-                {item.id === 'frentes' && processoCount > 0 && (
-                  <span className={`relative ml-auto text-[10px] ${active ? 'text-white/80' : 'text-tertiary'}`}>{processoCount}</span>
+                {item.id === 'frentes' && empresaCount > 0 && (
+                  <span className={`relative ml-auto text-[10px] ${active ? 'text-white/80' : 'text-tertiary'}`}>{empresaCount}</span>
+                )}
+                {item.id === 'arquivados' && arquivadosCount > 0 && (
+                  <span className={`relative ml-auto text-[10px] ${active ? 'text-white/80' : 'text-tertiary'}`}>{arquivadosCount}</span>
                 )}
                 {item.id === 'dashboard' && blockedCount > 0 && (
                   <span className="relative ml-auto flex h-4 w-4 items-center justify-center rounded-full bg-red-500/30 text-[9px] text-white">
@@ -180,7 +190,7 @@ function AuthenticatedApp({ user, signOut }: { user: any; signOut: () => void })
       <main className="flex-1 overflow-y-auto">
         {/* Accent line no topo (sólida) */}
         <div className="h-0.5 bg-brand-primary opacity-60" />
-        <ViewErrorBoundary resetKey={view.name + (view.name === 'processo' || view.name === 'automacao' ? view.id : '')}>
+        <ViewErrorBoundary resetKey={view.name + (view.name === 'processo' ? view.id : '')}>
           {view.name === 'dashboard' && (
             <Dashboard processos={processos} frentes={frentes} loading={processosLoading} onNavigate={navigate} />
           )}
@@ -197,11 +207,7 @@ function AuthenticatedApp({ user, signOut }: { user: any; signOut: () => void })
             <ProcessoView
               processoId={view.id}
               onBack={goBack}
-              onOpenAutomacao={(id) => navigate({ name: 'automacao', id })}
             />
-          )}
-          {view.name === 'automacao' && (
-            <AutomacaoView automacaoId={view.id} onBack={goBack} />
           )}
           {view.name === 'kanban' && (
             <KanbanView processos={processos} loading={processosLoading} onOpenProcesso={(id) => navigate({ name: 'processo', id })} onProcessoMoved={refreshAll} />
@@ -217,6 +223,16 @@ function AuthenticatedApp({ user, signOut }: { user: any; signOut: () => void })
           )}
           {view.name === 'ai' && (
             <AIPanel processos={processos} onOpenProcesso={(id) => navigate({ name: 'processo', id })} />
+          )}
+          {view.name === 'arquivados' && (
+            <ArquivadosView
+              frentes={frentes}
+              areas={areas}
+              processos={processos}
+              loading={processosLoading}
+              onRefresh={refreshAll}
+              onOpenProcesso={(id) => navigate({ name: 'processo', id })}
+            />
           )}
         </ViewErrorBoundary>
       </main>
