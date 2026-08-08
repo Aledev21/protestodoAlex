@@ -4,16 +4,17 @@ import {
   ChevronDown, Archive, ArchiveRestore, Trash2, Edit3, AlertOctagon,
   Building2, Folder, Search, X as XIcon, MoreVertical, FileEdit,
 } from 'lucide-react';
-import { Processo, Frente, Area, Stakeholder, Cliente } from '../lib/types';
-import { Card, Badge, Button, Modal, Input, TextArea, Select } from '../components/ui';
+import { Processo, Frente, Area, Stakeholder, Cliente, Visibilidade } from '../lib/types';
+import { Card, Badge, Button, Modal, Input, TextArea, Select, VisibilityToggle } from '../components/ui';
 import ActionDrawer, { ActionItem } from '../components/ActionDrawer';
 import {
   getStatusLabel, getEtapaLabel, getPrioridadeLabel,
   STATUS_PROCESSO, PRIORIDADES, ETAPAS_PROCESSO,
 } from '../lib/constants';
-import { useStakeholders, useClientes, useAreas } from '../lib/hooks';
+import { useStakeholders, useClientes, useAreas, useProfiles, useUser, useFrenteShares, useAreaShares } from '../lib/hooks';
 import { useToast } from '../components/Toast';
 import { supabase } from '../lib/supabase';
+import SharingSection from '../components/SharingSection';
 
 type DrawerTarget =
   | { type: 'frente'; item: Frente }
@@ -36,6 +37,8 @@ export default function FrentesView({
   const { areas, refetch: refetchAreas } = useAreas();
   const { stakeholders } = useStakeholders();
   const { clientes } = useClientes();
+  const { profiles } = useProfiles();
+  const { user } = useUser();
   const { notify } = useToast();
 
   const [expandedFrente, setExpandedFrente] = useState<string | null>(null);
@@ -51,6 +54,14 @@ export default function FrentesView({
   // Garante que só 1 drawer fica aberto por vez, sem ter 3 estados paralelos.
   const [drawer, setDrawer] = useState<DrawerTarget | null>(null);
   const closeDrawer = () => setDrawer(null);
+
+  // Hooks de compartilhamento: dependem do drawer, declarados depois do state.
+  const { shares: frenteShares, refetch: refetchFrenteShares } = useFrenteShares(
+    drawer?.type === 'frente' ? drawer.item.id : null,
+  );
+  const { shares: setorShares, refetch: refetchSetorShares } = useAreaShares(
+    drawer?.type === 'setor' ? drawer.item.id : null,
+  );
 
   // search
   const [search, setSearch] = useState('');
@@ -327,6 +338,12 @@ export default function FrentesView({
                     <div className="flex items-center gap-2">
                       <p className="text-base font-semibold text-primary truncate">{frente.nome}</p>
                       {frente.arquivado && <Badge color="slate">Arquivada</Badge>}
+                      {frente.visibilidade === 'private' && (
+                        <span className="flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-400 border border-amber-500/30">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-lock h-3 w-3"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                          Privado
+                        </span>
+                      )}
                     </div>
                     {frente.descricao && <p className="text-xs text-tertiary truncate">{frente.descricao}</p>}
                   </div>
@@ -381,6 +398,12 @@ export default function FrentesView({
                               <Folder className={`h-4 w-4 flex-shrink-0 ${setor.arquivado ? 'text-slate-500' : 'text-amber-400'}`} />
                               <p className="text-sm font-medium text-primary truncate">{setor.nome}</p>
                               {setor.arquivado && <Badge color="slate">Arquivado</Badge>}
+                              {setor.visibilidade === 'private' && (
+                                <span className="flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-400 border border-amber-500/30">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-lock h-3 w-3"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                  Privado
+                                </span>
+                              )}
                               <span className="text-xs text-tertiary">{setorProcessos.length} processos</span>
                             </button>
                             <button
@@ -632,9 +655,61 @@ export default function FrentesView({
             onDeleteProcesso: (p) => setDeleteProcesso(p),
           },
         )}
+        footer={getDrawerFooter(
+          drawer,
+          { profiles, user, frenteShares, setorShares, currentUserId: user?.id ?? null,
+            onAfterChange: () => { refetchFrenteShares(); refetchSetorShares(); onRefresh(); } },
+        )}
       />
     </div>
   );
+}
+
+// Footer do drawer — seção de compartilhamento inline.
+// Só aparece para frente e setor (processo a gente mostra no header do ProcessoView).
+function getDrawerFooter(
+  d: DrawerTarget | null,
+  deps: {
+    profiles: ReturnType<typeof useProfiles>['profiles'];
+    user: ReturnType<typeof useUser>['user'];
+    frenteShares: ReturnType<typeof useFrenteShares>['shares'];
+    setorShares: ReturnType<typeof useAreaShares>['shares'];
+    currentUserId: string | null;
+    onAfterChange: () => void;
+  },
+): React.ReactNode {
+  if (!d) return null;
+  if (d.type === 'frente') {
+    return (
+      <SharingSection
+        entity="frente"
+        entityId={d.item.id}
+        visibilidade={d.item.visibilidade}
+        ownerId={d.item.owner_id}
+        shares={deps.frenteShares}
+        profiles={deps.profiles}
+        currentUserId={deps.currentUserId}
+        onSharesChange={deps.onAfterChange}
+        canEdit={d.item.owner_id === deps.currentUserId}
+      />
+    );
+  }
+  if (d.type === 'setor') {
+    return (
+      <SharingSection
+        entity="area"
+        entityId={d.item.id}
+        visibilidade={d.item.visibilidade}
+        ownerId={d.item.owner_id}
+        shares={deps.setorShares}
+        profiles={deps.profiles}
+        currentUserId={deps.currentUserId}
+        onSharesChange={deps.onAfterChange}
+        canEdit={d.item.owner_id === deps.currentUserId}
+      />
+    );
+  }
+  return null;
 }
 
 // =================== Drawer helpers ===================
@@ -772,18 +847,24 @@ function NewFrenteModal({ open, onClose, onDone }: { open: boolean; onClose: () 
   const [nome, setNome] = useState('');
   const [descricao, setDescricao] = useState('');
   const [cor, setCor] = useState('#3b82f6');
+  const [visibilidade, setVisibilidade] = useState<Visibilidade>('shared');
   const { notify } = useToast();
+
+  useEffect(() => {
+    if (open) {
+      setNome(''); setDescricao(''); setCor('#3b82f6'); setVisibilidade('shared');
+    }
+  }, [open]);
 
   async function handleSubmit() {
     if (!nome) return;
-    const { error } = await supabase.from('frentes').insert({ nome, descricao, cor });
+    const { error } = await supabase.from('frentes').insert({ nome, descricao, cor, visibilidade });
     if (error) {
       console.error('[NewFrenteModal]', error.message);
       notify('error', 'Erro ao criar empresa');
       return;
     }
     notify('success', 'Empresa criada');
-    setNome(''); setDescricao(''); setCor('#3b82f6');
     onClose();
     onDone();
   }
@@ -806,6 +887,7 @@ function NewFrenteModal({ open, onClose, onDone }: { open: boolean; onClose: () 
             ))}
           </div>
         </div>
+        <VisibilityToggle value={visibilidade} onChange={setVisibilidade} />
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
           <Button onClick={handleSubmit}>Criar Empresa</Button>
@@ -817,11 +899,16 @@ function NewFrenteModal({ open, onClose, onDone }: { open: boolean; onClose: () 
 
 function NewSetorModal({ open, onClose, frenteId, onDone }: { open: boolean; onClose: () => void; frenteId: string | null; onDone: () => void }) {
   const [nome, setNome] = useState('');
+  const [visibilidade, setVisibilidade] = useState<Visibilidade>('shared');
   const { notify } = useToast();
+
+  useEffect(() => {
+    if (open) { setNome(''); setVisibilidade('shared'); }
+  }, [open]);
 
   async function handleSubmit() {
     if (!nome || !frenteId) return;
-    const { error } = await supabase.from('areas').insert({ nome, frente_id: frenteId });
+    const { error } = await supabase.from('areas').insert({ nome, frente_id: frenteId, visibilidade });
     if (error) {
       console.error('[NewSetorModal]', error.message);
       notify('error', 'Erro ao criar setor');
@@ -837,6 +924,7 @@ function NewSetorModal({ open, onClose, frenteId, onDone }: { open: boolean; onC
     <Modal open={open} onClose={onClose} title="Novo Setor" width="sm">
       <div className="space-y-4">
         <Input label="Nome do Setor" value={nome} onChange={setNome} placeholder="Ex: BackOffice" required />
+        <VisibilityToggle value={visibilidade} onChange={setVisibilidade} />
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
           <Button onClick={handleSubmit}>Criar Setor</Button>
@@ -903,12 +991,14 @@ function NewProcessoModal({
   const [caminhoAnexo, setCaminhoAnexo] = useState('');
   const [volumetria, setVolumetria] = useState('');
   const [saving, setSaving] = useState('');
+  const [visibilidade, setVisibilidade] = useState<Visibilidade>('shared');
   const { notify } = useToast();
 
   useEffect(() => {
     if (open) {
       setNome(''); setDescricao(''); setClienteId(''); setAreaId(''); setResponsavelId(''); setSmeId('');
       setPrioridade('media'); setObjetivo(''); setEscopo(''); setCaminhoAnexo(''); setVolumetria(''); setSaving('');
+      setVisibilidade('shared');
     }
   }, [open]);
 
@@ -928,6 +1018,7 @@ function NewProcessoModal({
       prioridade,
       etapa: 'coleta',
       status: 'em_andamento',
+      visibilidade,
     }).select().single();
     if (error) {
       console.error('[NewProcessoModal]', error.message);
@@ -971,6 +1062,7 @@ function NewProcessoModal({
           <Input label="Volumetria" value={volumetria} onChange={setVolumetria} placeholder="Ex: 500 docs/mês" />
           <Input label="Saving" value={saving} onChange={setSaving} placeholder="Ex: 40h/mês" />
         </div>
+        <VisibilityToggle value={visibilidade} onChange={setVisibilidade} />
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
           <Button onClick={handleSubmit}>Criar Processo</Button>

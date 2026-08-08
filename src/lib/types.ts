@@ -1,9 +1,20 @@
+export type Visibilidade = 'shared' | 'private';
+
+export interface Profile {
+  id: string;
+  email: string;
+  display_name: string | null;
+  created_at: string;
+}
+
 export interface Frente {
   id: string;
   nome: string;
   descricao: string | null;
   cor: string | null;
   arquivado: boolean;
+  owner_id: string | null;
+  visibilidade: Visibilidade;
   created_at: string;
 }
 
@@ -18,6 +29,8 @@ export interface Area {
   nome: string;
   frente_id: string | null;
   arquivado: boolean;
+  owner_id: string | null;
+  visibilidade: Visibilidade;
   created_at: string;
 }
 
@@ -55,6 +68,8 @@ export interface Processo {
   etapa: string;
   prioridade: string;
   arquivado: boolean;
+  owner_id: string | null;
+  visibilidade: Visibilidade;
   data_criacao: string | null;
   created_at: string;
   updated_at: string;
@@ -65,6 +80,31 @@ export interface Processo {
   sme_stakeholder?: Stakeholder;
   processo_stakeholders?: ProcessoStakeholder[];
   automacoes?: Automacao[];
+}
+
+// Tabelas de compartilhamento
+export interface FrenteShare {
+  id: string;
+  frente_id: string;
+  user_id: string;
+  created_at: string;
+  profile?: Profile;
+}
+
+export interface AreaShare {
+  id: string;
+  area_id: string;
+  user_id: string;
+  created_at: string;
+  profile?: Profile;
+}
+
+export interface ProcessoShare {
+  id: string;
+  processo_id: string;
+  user_id: string;
+  created_at: string;
+  profile?: Profile;
 }
 
 export interface Automacao {

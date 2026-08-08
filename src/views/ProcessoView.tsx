@@ -3,13 +3,14 @@ import {
   ArrowLeft, Plus, Trash2, Check, MessageSquare, Paperclip,
   AlertCircle, Clock, HelpCircle, Link2, OctagonAlert, Users,
   FileText, Target, GitBranch, Calendar, ChevronRight, X,
-  AlertOctagon, Edit3, Save, FolderOpen,
+  AlertOctagon, Edit3, Save, FolderOpen, Share2, Lock,
 } from 'lucide-react';
-import { useProcesso, useTimeline, usePendencias, useChecklist, useComentarios, useAnexos, useStakeholders } from '../lib/hooks';
+import { useProcesso, useTimeline, usePendencias, useChecklist, useComentarios, useAnexos, useStakeholders, useProfiles, useUser, useProcessoShares } from '../lib/hooks';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../components/Toast';
 import { Card, Badge, Button, Modal, Input, TextArea, Select, Avatar, ProgressBar, EmptyState } from '../components/ui';
 import StakeholderAutocomplete from '../components/StakeholderAutocomplete';
+import SharingSection from '../components/SharingSection';
 import {
   ETAPAS_PROCESSO, STATUS_PROCESSO, PRIORIDADES, TIPOS_PENDENCIA, AGUARDANDO_QUEM,
   PAPEIS_STAKEHOLDER, PAPEIS_DESTAQUE,
@@ -35,8 +36,11 @@ export default function ProcessoView({
   const { comentarios, setComentarios } = useComentarios(processoId);
   const { anexos } = useAnexos(processoId);
   const { stakeholders, refetch: refetchStakeholders } = useStakeholders();
+  const { profiles } = useProfiles();
+  const { user } = useUser();
+  const { shares: processoShares, refetch: refetchProcessoShares } = useProcessoShares(processoId);
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'pendencias' | 'comments'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'sharing' | 'timeline' | 'pendencias' | 'comments'>('overview');
   const [showAddPendencia, setShowAddPendencia] = useState(false);
   const [showAddChecklist, setShowAddChecklist] = useState(false);
   const [newChecklistText, setNewChecklistText] = useState('');
@@ -210,6 +214,7 @@ export default function ProcessoView({
 
   const tabs = [
     { id: 'overview' as const, label: 'Visão Geral', icon: FileText },
+    { id: 'sharing' as const, label: 'Compartilhar', icon: Share2, count: 1 + processoShares.length },
     { id: 'timeline' as const, label: 'Timeline', icon: GitBranch, count: timeline.length },
     { id: 'pendencias' as const, label: 'Pendências', icon: AlertCircle, count: activePendencias.length },
     { id: 'comments' as const, label: 'Comentários', icon: MessageSquare, count: comentarios.length },
@@ -233,7 +238,15 @@ export default function ProcessoView({
               <ChevronRight className="h-3 w-3" />
               <span>{processo.cliente?.nome || 'Sem cliente'}</span>
             </div>
-            <h1 className="text-xl font-semibold text-primary">{processo.nome}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-semibold text-primary">{processo.nome}</h1>
+              {processo.visibilidade === 'private' && (
+                <span className="flex items-center gap-1 rounded-md bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-400 border border-amber-500/30">
+                  <Lock className="h-3 w-3" />
+                  Privado
+                </span>
+              )}
+            </div>
             {processo.descricao && <p className="mt-1 text-sm text-secondary">{processo.descricao}</p>}
           </div>
           <div className="flex flex-shrink-0 items-center gap-2">
@@ -305,6 +318,24 @@ export default function ProcessoView({
 
       {/* Tab content */}
       <div className="px-8 py-6">
+        {activeTab === 'sharing' && (
+          <div className="mx-auto max-w-2xl">
+            <Card className="p-5">
+              <SharingSection
+                entity="processo"
+                entityId={processo.id}
+                visibilidade={processo.visibilidade}
+                ownerId={processo.owner_id}
+                shares={processoShares}
+                profiles={profiles}
+                currentUserId={user?.id ?? null}
+                onSharesChange={() => refetchProcessoShares()}
+                canEdit={processo.owner_id === user?.id}
+              />
+            </Card>
+          </div>
+        )}
+
         {activeTab === 'overview' && (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <div className="space-y-6 lg:col-span-2">

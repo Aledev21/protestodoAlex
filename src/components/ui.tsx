@@ -1,5 +1,6 @@
-import { LucideIcon } from 'lucide-react';
+import { LucideIcon, Globe, Lock } from 'lucide-react';
 import { ReactNode } from 'react';
+import { Visibilidade } from '../lib/types';
 
 export function Badge({
   children,
@@ -278,5 +279,53 @@ export function Select({
         ))}
       </select>
     </label>
+  );
+}
+
+/**
+ * Seletor de visibilidade (compartilhado / privado) usado nos modais de criação.
+ */
+export function VisibilityToggle({
+  value, onChange, label = 'Visibilidade',
+}: {
+  value: Visibilidade;
+  onChange: (v: Visibilidade) => void;
+  label?: string;
+}) {
+  return (
+    <div>
+      <span className="mb-1.5 block text-xs font-medium text-secondary">{label}</span>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => onChange('shared')}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
+            value === 'shared'
+              ? 'border-brand-primary/50 bg-brand-primary/10 text-brand-light'
+              : 'border-default bg-elevated text-secondary hover:bg-hover-state'
+          }`}
+        >
+          <Globe className="h-4 w-4" />
+          <span>Compartilhar</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange('private')}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
+            value === 'private'
+              ? 'border-brand-primary/50 bg-brand-primary/10 text-brand-light'
+              : 'border-default bg-elevated text-secondary hover:bg-hover-state'
+          }`}
+        >
+          <Lock className="h-4 w-4" />
+          <span>Privado</span>
+        </button>
+      </div>
+      <p className="mt-1.5 text-[11px] text-tertiary">
+        {value === 'shared'
+          ? 'Todos os usuários autenticados vão ver este item.'
+          : 'Só você e quem você incluir depois vão ver este item.'}
+      </p>
+    </div>
   );
 }
